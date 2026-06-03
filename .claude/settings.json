@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(php artisan migrate:fresh)",
+      "Bash(php artisan migrate:fresh:*)",
+      "Bash(php artisan db:wipe)",
+      "Bash(php artisan db:wipe:*)",
+      "Bash(*docker compose exec * npm run build)",
+      "Bash(*docker compose exec * npm run build:*)"
+    ],
+    "allow": [
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)",
+      "Bash(git log)",
+      "Bash(git log:*)",
+      "Bash(git branch)",
+      "Bash(git branch:*)",
+      "Bash(git show)",
+      "Bash(git show:*)",
+      "Bash(git blame:*)",
+      "Bash(git stash list)",
+      "Bash(git remote -v)",
+
+      "Bash(php artisan route:list)",
+      "Bash(php artisan route:list:*)",
+      "Bash(php artisan migrate:status)",
+      "Bash(php artisan migrate:status:*)",
+      "Bash(php artisan list)",
+      "Bash(php artisan list:*)",
+      "Bash(php artisan about)",
+      "Bash(php artisan about:*)",
+      "Bash(php artisan config:show)",
+      "Bash(php artisan config:show:*)",
+      "Bash(php artisan model:show:*)",
+      "Bash(php artisan event:list)",
+      "Bash(php artisan event:list:*)",
+      "Bash(php artisan queue:failed)",
+      "Bash(php artisan queue:failed:*)",
+      "Bash(php artisan schedule:list)",
+      "Bash(php artisan schedule:list:*)",
+
+      "Bash(vendor/bin/phpunit)",
+      "Bash(vendor/bin/phpunit:*)",
+      "Bash(vendor/bin/pest)",
+      "Bash(vendor/bin/pest:*)",
+      "Bash(./vendor/bin/phpunit)",
+      "Bash(./vendor/bin/phpunit:*)",
+      "Bash(./vendor/bin/pest)",
+      "Bash(./vendor/bin/pest:*)",
+
+      "Bash(composer show)",
+      "Bash(composer show:*)",
+      "Bash(composer why)",
+      "Bash(composer why:*)",
+      "Bash(composer outdated)",
+      "Bash(composer outdated:*)",
+      "Bash(composer audit)",
+      "Bash(composer audit:*)",
+      "Bash(composer --version)",
+
+      "Bash(npm ls)",
+      "Bash(npm ls:*)",
+      "Bash(npm outdated)",
+      "Bash(npm outdated:*)",
+      "Bash(npm audit)",
+      "Bash(npm audit:*)",
+      "Bash(npm info:*)",
+
+      "Bash(docker compose ps)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker ps)",
+      "Bash(docker ps:*)",
+
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(ls:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(tree:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/finish-feature-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

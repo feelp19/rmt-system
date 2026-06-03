@@ -29,3 +29,11 @@ Thumbs.db
 **/caddy
 frankenphp
 frankenphp-worker.php
+
+/.vault/.obsidian/workspace.json
+/.vault/.obsidian/workspace-mobile.json
+/.vault/.obsidian/cache
+/.vault/.trash/
+/.vault/.attachments/
+/.superpowers/
+/.claude/settings.local.json
