@@ -35,12 +35,12 @@ services:
     networks:
       - rmt
 
-  queue:
+  horizon:
     build:
       context: .
     restart: unless-stopped
     env_file: .env
-    command: php artisan queue:work --tries=3 --max-time=3600
+    command: php artisan horizon
     depends_on:
       mysql:
         condition: service_healthy

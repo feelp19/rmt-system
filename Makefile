@@ -8,7 +8,7 @@ APP_IT  := $(COMPOSE) exec app
 ARTISAN := $(APP) php artisan
 
 .DEFAULT_GOAL := help
-.PHONY: help up build start stop down restart ps logs logs-app logs-nuxt logs-queue \
+.PHONY: help up build start stop down restart ps logs logs-app logs-nuxt logs-horizon \
         migrate migrate-fresh seed fresh rollback test shell tinker artisan \
         optimize optimize-clear octane-reload key setup env down-volumes prune \
         front-install front-dev front-build front-preview
@@ -49,8 +49,8 @@ logs-app: ## Tail Laravel/Octane (app) logs
 logs-nuxt: ## Tail Nuxt SSR logs
 	$(COMPOSE) logs -f nuxt
 
-logs-queue: ## Tail queue worker logs
-	$(COMPOSE) logs -f queue
+logs-horizon: ## Tail Horizon (queue worker) logs
+	$(COMPOSE) logs -f horizon
 
 ## ─── Laravel (inside app container) ─────────────────────────────────────────
 migrate: ## Run database migrations
