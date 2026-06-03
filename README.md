@@ -25,12 +25,12 @@ Browser ── :80 ──▶│  /api/*  /sanctum/*  ──▶  Laravel (Octane 
                                                    │ SSR fetch
                               nuxt ──▶ http://app/api ──▶ Laravel (mesma rede)
 
-   queue (php artisan queue:work)        mysql:8.4        redis:alpine
+   horizon (php artisan horizon)        mysql:8.4        redis:alpine
 ```
 
 - **Browser** sempre chama `/api` relativo (mesma origem) → sem CORS.
 - **SSR** (servidor Nuxt) chama a URL interna (`http://app/api`) na rede Docker.
-- **Async** real = `queue:work` em container próprio (`Octane::concurrently()` é Swoole-only, não existe no FrankenPHP).
+- **Async** real = `php artisan horizon` (container próprio, filas Redis; dashboard `/horizon`). `Octane::concurrently()` é Swoole-only, não existe no FrankenPHP.
 
 ## Requisitos
 
@@ -90,7 +90,7 @@ make front-dev
 | `make down` | para e remove containers (volumes mantidos) |
 | `make start` / `make stop` / `make restart` | controle dos containers |
 | `make ps` | status dos serviços |
-| `make logs` | logs de tudo (`logs-app`, `logs-nuxt`, `logs-queue`) |
+| `make logs` | logs de tudo (`logs-app`, `logs-nuxt`, `logs-horizon`) |
 | `make migrate` | roda migrations |
 | `make migrate-fresh` | dropa tudo e migra de novo |
 | `make seed` / `make fresh` | seeders / fresh + seed |
@@ -117,7 +117,7 @@ rmt-system/
   routes/api.php          # /api/health, /api/user (auth:sanctum)
   Dockerfile              # imagem FrankenPHP/Octane (backend)
   Caddyfile               # roteamento single-origin
-  compose.yaml            # app + nuxt + queue + mysql + redis
+  compose.yaml            # app + nuxt + horizon + mysql + redis
   Makefile                # operações
   frontend/               # Nuxt 4 SSR
     app/                  # pages, components, composables
