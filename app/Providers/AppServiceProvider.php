@@ -23,11 +23,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('viewPulse', function (?User $user) {
-            return $user?->email === 'flp.pietro19@gmail.com';
+            return $this->app->environment('local')
+                || $user?->email === 'flp.pietro19@gmail.com';
         });
 
         LogViewer::auth(function ($request) {
-            return $request->user()?->email === 'flp.pietro19@gmail.com';
+            return $this->app->environment('local')
+                || $request->user()?->email === 'flp.pietro19@gmail.com';
         });
     }
 }
