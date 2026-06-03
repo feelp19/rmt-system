@@ -1,0 +1,1 @@
+../../.claude/skills/rmt-tests/SKILL.md

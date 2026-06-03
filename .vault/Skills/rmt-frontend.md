@@ -1,0 +1,1 @@
+../../.claude/skills/rmt-frontend/SKILL.md

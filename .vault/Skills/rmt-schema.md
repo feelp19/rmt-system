@@ -1,0 +1,1 @@
+../../.claude/skills/rmt-schema/SKILL.md

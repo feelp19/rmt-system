@@ -1,0 +1,11 @@
+{
+  "defaultViewMode": "source",
+  "foldHeading": false,
+  "showLineNumber": true,
+  "readableLineLength": true,
+  "strictLineBreaks": false,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "Features",
+  "attachmentFolderPath": ".attachments",
+  "promptDelete": true
+}
