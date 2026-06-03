@@ -1,0 +1,56 @@
+{
+	# Octane-provided global options (e.g. "auto_https disable_redirects").
+	{$CADDY_GLOBAL_OPTIONS}
+
+	# Admin API endpoint (Octane uses this for server inspection / --admin-port).
+	admin {$CADDY_SERVER_ADMIN_HOST:localhost}:{$CADDY_SERVER_ADMIN_PORT:2019}
+
+	# FrankenPHP worker mode — this is what makes Octane actually run as a worker.
+	# Mirrors Laravel Octane's built-in stub so passing --caddyfile preserves worker mode.
+	frankenphp {
+		worker {
+			file "{$APP_PUBLIC_PATH}/frankenphp-worker.php"
+			{$CADDY_SERVER_WORKER_DIRECTIVE}
+			{$CADDY_SERVER_WATCH_DIRECTIVES}
+		}
+	}
+}
+
+# Single listener. Defaults to :80 for production (behind the compose port mapping);
+# override with the SERVER_NAME env var for local testing (e.g. SERVER_NAME=":8088").
+{$SERVER_NAME::80} {
+	log {
+		level {$CADDY_SERVER_LOG_LEVEL:INFO}
+
+		# Redact the authorization query parameter that can be set by Mercure...
+		format filter {
+			wrap {$CADDY_SERVER_LOGGER:json}
+			fields {
+				uri query {
+					replace authorization REDACTED
+				}
+			}
+		}
+	}
+
+	root * "{$APP_PUBLIC_PATH}"
+	encode zstd br gzip
+
+	# Laravel API + Sanctum -> PHP (FrankenPHP worker, Octane).
+	# Use `handle` (NOT `handle_path`) so the /api and /sanctum prefixes are preserved;
+	# Laravel routes are registered under /api.
+	@laravel path /api/* /sanctum/*
+	handle @laravel {
+		php_server {
+			index frankenphp-worker.php
+			try_files {path} frankenphp-worker.php
+			# Required for the public/storage/ directory...
+			resolve_root_symlink
+		}
+	}
+
+	# Everything else -> Nuxt SSR service.
+	handle {
+		reverse_proxy nuxt:3000
+	}
+}
