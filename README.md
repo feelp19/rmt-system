@@ -1,58 +1,144 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# rmt-system
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API **Laravel 13** (sob **Octane + FrankenPHP**, worker mode) + frontend **Nuxt 4 SSR** com **PrimeVue** (tema Aura), servidos em **origem única** por **Caddy**. Orquestrado por Docker Compose.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Camada | Tecnologia |
+|---|---|
+| Backend | Laravel 13, PHP 8.5, Laravel Octane 2.x |
+| App server | FrankenPHP (Caddy embedded) — worker mode |
+| Frontend | Nuxt 4 (SSR), Vue 3, PrimeVue 4.5 + @primeuix/themes (Aura), primeicons |
+| Dados | MySQL 8.4, Redis (cache/queue) |
+| Proxy | Caddy: `/api`,`/sanctum` → Laravel worker · resto → Nuxt SSR |
+| Auth | Laravel Sanctum (scaffold) |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Arquitetura
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Origem única atrás do Caddy do container `app`:
 
-## Learning Laravel
+```
+                  ┌─────────────────────────── app (FrankenPHP/Caddy :80) ──┐
+Browser ── :80 ──▶│  /api/*  /sanctum/*  ──▶  Laravel (Octane worker)        │
+                  │  /*                  ──▶  reverse_proxy ─▶ nuxt:3000 (SSR)│
+                  └──────────────────────────────────────────────────────────┘
+                                                   │ SSR fetch
+                              nuxt ──▶ http://app/api ──▶ Laravel (mesma rede)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+   queue (php artisan queue:work)        mysql:8.4        redis:alpine
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+- **Browser** sempre chama `/api` relativo (mesma origem) → sem CORS.
+- **SSR** (servidor Nuxt) chama a URL interna (`http://app/api`) na rede Docker.
+- **Async** real = `queue:work` em container próprio (`Octane::concurrently()` é Swoole-only, não existe no FrankenPHP).
 
-## Contributing
+## Requisitos
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- **Docker** + Docker Compose (caminho principal).
+- Para dev híbrido no host: **PHP 8.3+**, **Composer**, **Node 22+**.
 
-## Code of Conduct
+## Setup rápido (Docker)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+git clone https://github.com/feelp19/rmt-system.git
+cd rmt-system
 
-## Security Vulnerabilities
+cp .env.example .env        # ajuste credenciais se quiser
+php artisan key:generate    # gera APP_KEY no .env (precisa de PHP+vendor; ou use `make env`)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+make setup                  # build + sobe stack + migra
+# abre http://localhost
+```
 
-## License
+Verificação:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+curl http://localhost/api/health   # {"status":"ok"}
+# http://localhost/  -> home Nuxt (SSR) com card PrimeVue mostrando o status da API
+```
+
+> Sem PHP/Composer no host? Gere o `APP_KEY` dentro do container depois do `make up`:
+> `docker compose exec app php artisan key:generate --show` e cole o valor em `.env`, depois `make up` de novo.
+
+## Setup dev (híbrido — hot reload)
+
+Banco/Redis no Docker, Laravel e Nuxt no host:
+
+```bash
+docker compose up -d mysql redis          # dados
+make front-install                         # deps do Nuxt (1ª vez)
+
+# terminal A — API (host, :8000)
+php artisan octane:start --server=frankenphp --port=8000
+
+# terminal B — Nuxt dev (host, :3000, proxy /api -> :8000)
+make front-dev
+# abre http://localhost:3000
+```
+
+> Rodando a API no host contra o MySQL do Docker: use `DB_HOST=127.0.0.1` e a porta forwarded `3307` no `.env` (no container é `DB_HOST=mysql`).
+
+## Comandos `make`
+
+`make` (ou `make help`) lista tudo. Principais:
+
+| Comando | Ação |
+|---|---|
+| `make setup` | 1ª vez: build + sobe stack + migra |
+| `make up` | build (se preciso) + sobe detached |
+| `make build` | build das imagens |
+| `make down` | para e remove containers (volumes mantidos) |
+| `make start` / `make stop` / `make restart` | controle dos containers |
+| `make ps` | status dos serviços |
+| `make logs` | logs de tudo (`logs-app`, `logs-nuxt`, `logs-queue`) |
+| `make migrate` | roda migrations |
+| `make migrate-fresh` | dropa tudo e migra de novo |
+| `make seed` / `make fresh` | seeders / fresh + seed |
+| `make rollback` | desfaz último batch de migration |
+| `make test` | suíte de testes Laravel |
+| `make optimize` | cache de config/rotas/eventos (rode `octane-reload` depois) |
+| `make optimize-clear` | limpa caches |
+| `make octane-reload` | reload zero-downtime dos workers |
+| `make shell` | shell no container `app` |
+| `make tinker` | Laravel Tinker |
+| `make artisan c="route:list"` | qualquer comando artisan |
+| `make env` | cria `.env` do exemplo + gera APP_KEY (host) |
+| `make front-install` / `front-dev` / `front-build` / `front-preview` | Nuxt |
+| `make down-volumes` | ⚠️ remove containers **e** volumes (apaga dados do DB) |
+| `make prune` | limpa imagens/cache dangling do Docker |
+
+> Comandos de Laravel (`migrate`, `test`, etc.) rodam **dentro do container `app`** — a stack precisa estar `up`.
+
+## Estrutura
+
+```
+rmt-system/
+  app/ bootstrap/ config/ database/ routes/   # Laravel (API-only)
+  routes/api.php          # /api/health, /api/user (auth:sanctum)
+  Dockerfile              # imagem FrankenPHP/Octane (backend)
+  Caddyfile               # roteamento single-origin
+  compose.yaml            # app + nuxt + queue + mysql + redis
+  Makefile                # operações
+  frontend/               # Nuxt 4 SSR
+    app/                  # pages, components, composables
+    nuxt.config.ts        # ssr + PrimeVue Aura + runtimeConfig + devProxy
+    Dockerfile            # imagem node SSR
+  docs/superpowers/       # spec + plano de implementação
+```
+
+## Variáveis de ambiente
+
+Backend (`.env`): `APP_KEY`, `DB_*` (`DB_HOST=mysql` no Docker), `REDIS_HOST=redis`, `OCTANE_SERVER=frankenphp`, `SANCTUM_STATEFUL_DOMAINS`, `QUEUE_CONNECTION`.
+
+Frontend (`frontend/.env`): `NUXT_API_BASE` (URL interna p/ SSR), `NUXT_PUBLIC_API_BASE` (base do browser, relativa).
+
+## Testes
+
+```bash
+make test                 # dentro do container
+# ou no host: php artisan test
+```
+
+## Fora de escopo (próximas specs)
+
+Fluxo de login/auth completo (Sanctum SPA cookie + forward de cookie no SSR), CRUD de domínio, CI/CD, TLS/domínio real, testes e2e.
