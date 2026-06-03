@@ -41,6 +41,10 @@ services:
     restart: unless-stopped
     env_file: .env
     command: php artisan horizon
+    # Image HEALTHCHECK probes the Caddy admin endpoint, which the horizon
+    # worker process does not serve — disable it to avoid a false "unhealthy".
+    healthcheck:
+      disable: true
     depends_on:
       mysql:
         condition: service_healthy
