@@ -39,7 +39,7 @@
 	# Laravel API + Sanctum -> PHP (FrankenPHP worker, Octane).
 	# Use `handle` (NOT `handle_path`) so the /api and /sanctum prefixes are preserved;
 	# Laravel routes are registered under /api.
-	@laravel path /api/* /sanctum/*
+	@laravel path /api/* /sanctum/* /horizon* /pulse* /log-viewer* /livewire* /vendor/*
 	handle @laravel {
 		php_server {
 			index frankenphp-worker.php
