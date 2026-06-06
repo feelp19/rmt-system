@@ -19,7 +19,7 @@ rmt-system é um scaffold de aplicação full-stack API + SSR com arquitetura de
 
 - **Backend**: Laravel 13 API-only (sem views Blade; frontend desacoplado via Nuxt)
 - **Frontend**: Nuxt 4 SSR com PrimeVue
-- **Domínio**: marketplace de itens/gold de jogos com **escrow de dupla confirmação** + taxa de 5% (MVP). Entidades: `User`, `Wallet`, `Listing`, `Order`. Ver `rmt-schema` para o modelo de dados e `rmt-architecture` para o fluxo do escrow (`OrderService`).
+- **Domínio**: marketplace de itens/gold de jogos com **escrow de dupla confirmação** + taxa de 5% (MVP). Entidades: `User`, `Wallet`, `Listing`, `Order`. Todo movimento de dinheiro gera uma entrada no **ledger de confiabilidade** (HMAC-SHA256 encadeado por wallet). Ver `rmt-schema` para o modelo de dados, `rmt-architecture` para o fluxo do escrow (`OrderService`) e o `LedgerService`.
 
 ## Stack
 
@@ -60,6 +60,8 @@ Autenticado (`auth:sanctum`):
 - `GET /api/orders` · `POST /api/orders` — listar / comprar (gera escrow)
 - `GET /api/orders/{id}`
 - `POST /api/orders/{id}/confirm-delivery` (vendedor) · `POST /api/orders/{id}/confirm-receipt` (comprador) — dupla confirmação; ambos → libera escrow
+- `GET /api/wallet/ledger` — extrato paginado do ledger de confiabilidade, escopado por `user_id` (`throttle:60,1`)
+- `GET /api/ledger/{hash}/verify` — verifica integridade de uma entrada do ledger; escopo: dono da wallet ou contraparte da order (`throttle:60,1`)
 
 Controllers em `app/Http/Controllers/{Auth,Wallet,Marketplace}/`. Respostas via Resources em `app/Http/Resources/{User,Wallet,Marketplace}/`. Listagens usam envelope paginado (`response()->json($paginator->through(...))`); mutações/leitura única usam `{ "data": ... }`.
 

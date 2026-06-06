@@ -40,6 +40,53 @@ Services em `app/Services/`:
 - **`ListingService`** — `create` (recebe `UploadedFile $photo`, obriga foto), `update` (só ativo; troca foto e apaga a antiga), `cancel`.
 - **`BoostService`** (destaque pago) — `purchaseWithWallet(User, Listing, BoostTier)`: transação + `lockForUpdate` na carteira, checa boost ativo sob lock, debita preço do tier (`BoostTier::priceCents()`), cria `Boost` ativo (`now` → `+config('marketplace.boost_days')`). Máx. 1 boost ativo/anúncio. Inc 2 (PIX) reusa `createActiveBoost` após confirmação.
 
+## Ledger de confiabilidade (HMAC encadeado por carteira)
+
+Todo movimento de dinheiro grava uma entrada imutável na tabela `ledger_entries` com cadeia HMAC-SHA256 por wallet — para rastreabilidade, tamper-evidence e legitimidade.
+
+### `App\Services\LedgerService`
+
+Stateless (Octane-safe). Lê `config('ledger.hmac_key')` a cada chamada — **fail-closed**: lança exceção se a chave estiver vazia.
+
+**Métodos públicos:**
+
+| Método | Descrição |
+|---|---|
+| `record(Wallet $lockedWallet, LedgerEntryType, LedgerDirection, int $amount, int $balanceAfter, ?string $refType, ?int $refId): LedgerEntry` | Grava a linha, computa prev_hash/seq da cabeça da wallet, atualiza `ledger_head_hash` e `ledger_seq`. **Precondição obrigatória**: deve ser chamado dentro da transação do caller, com a wallet já em `lockForUpdate`. |
+| `signatureValid(LedgerEntry $entry): bool` | Recomputa o HMAC e compara com `$entry->hash`. |
+| `verifyEntry(LedgerEntry $entry): bool` | Valida assinatura + elo (busca a entrada anterior `(wallet_id, seq-1)` e verifica que `prev_hash` bate). |
+
+**HMAC-SHA256** é calculado sobre o JSON canônico de ordem fixa dos campos: `wallet_id, seq, type, direction, amount_cents, balance_after_cents, reference_type, reference_id, prev_hash` — **sem** `created_at` (criação fora do campo de hash).
+
+Config: `config/ledger.php` → `hmac_key` => `env('LEDGER_HMAC_KEY')`. Variável obrigatória em `.env` e `phpunit.xml` (valor de teste).
+
+### Pontos de gancho — onde o ledger é appendado
+
+Append sempre **dentro da transação existente do caller**, com a wallet já em `lockForUpdate`:
+
+| Serviço / método | Tipo de entrada | Observação |
+|---|---|---|
+| `WalletService::deposit` | `DepositCredit` | `deposit` passou a usar `DB::beginTransaction` + `lockForUpdate` (antes era `increment` lock-free) |
+| `OrderService::purchase` | `EscrowDebit` | wallet do comprador já em lock |
+| `OrderService::release` | `EscrowReleaseCredit` | wallet do vendedor em lock |
+| `PixChargeService::confirmPaid` | `PixTopupCredit` | wallet e charge em lock |
+| `BoostService::purchaseWithWallet` | `BoostDebit` | wallet em lock |
+
+Idempotência: o append ocorre no caminho one-shot sob guard de status/lock — nunca duplica linha.
+
+### Comando de verificação
+
+`php artisan ledger:verify {--wallet=}` (`App\Console\Commands\VerifyLedgerCommand`): percorre cada cadeia (ou a wallet indicada), validando HMAC + elo de prev_hash + seq contíguo + cabeça da wallet. Sai com código ≠ 0 se detectar adulteração, truncamento ou lacuna de sequência.
+
+### API do ledger
+
+| Rota | Controller | Resource | Descrição |
+|---|---|---|---|
+| `GET /api/wallet/ledger` | `Wallet\WalletLedgerController` | `Marketplace\LedgerEntryResource` | Extrato paginado, escopado por `user_id`; expõe `code`=hash, **nunca** `prev_hash` |
+| `GET /api/ledger/{hash}/verify` | `Marketplace\LedgerVerificationController` | `LedgerVerificationResource` | Escopo: dono da wallet **ou** contraparte da order referenciada; mismatch/inexistente → 404 anti-enumeração |
+
+Ambas com `throttle:60,1`. Rota de verify com `whereAlphaNumeric('hash')`.
+
 **Ordenação por boost sem `DB::raw`** (regra 5): `ListingController::index`/`featured` usam `addSelect(['grid_boost_weight' => Boost::select('weight')->whereColumn('listing_id','listings.id')->active()->...->limit(1)])` + `->orderByDesc($alias)`. Eager load `activeBoost` (HasOne `->active()->latestOfMany()`) p/ o badge. `whereHas('boosts', fn($q)=>$q->active())` filtra o destaque.
 
 ## Pagamentos PIX (PushinPay) — integração externa

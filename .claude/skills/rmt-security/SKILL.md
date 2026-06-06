@@ -26,6 +26,15 @@ user-invocable: false
 - **Order escopada por participante**: `where(buyer_id = me OR seller_id = me)->firstOrFail()` → 404 para estranho; papel errado (comprador tentando confirmar entrega) → Policy → 403.
 - Tokens Sanctum emitidos com `expires_at` (30 dias) — lifecycle obrigatório.
 
+## Ledger de confiabilidade — modelo de confiança
+
+- **Chave HMAC apenas em `.env`** (`LEDGER_HMAC_KEY`) — nunca hardcoded, nunca em resposta ou log. `LedgerService` lê `config('ledger.hmac_key')` a cada chamada e lança exceção se vazia (**fail-closed**).
+- **`code` = hash é seguro de exibir**: HMAC-SHA256 com chave secreta não é reversível nem forjável sem a chave; o cliente pode guardar o código para verificação posterior.
+- **`prev_hash` nunca exposto**: a `LedgerEntryResource` expõe `code`=hash mas omite `prev_hash` (campo interno da cadeia).
+- **Escopo do endpoint verify**: dono da wallet **ou** contraparte da order referenciada. Qualquer mismatch ou hash inexistente retorna **404** (anti-enumeração — nunca 403).
+- **Append sempre sob lock**: o gancho do ledger deve estar dentro da transação do caller com a wallet em `lockForUpdate`. Nunca appendar fora de transação.
+- **A cadeia detecta adulteração, deleção e truncamento**: HMAC garante integridade de cada linha; elo `prev_hash` detecta remoção ou reordenação; `ledger_head_hash` + `ledger_seq` na wallet detectam truncamento da cauda.
+
 ## Webhook PushinPay (PIX) — gateway SEM assinatura
 
 A PushinPay **não assina** o webhook (sem HMAC). Modelo de confiança adotado:
@@ -212,3 +221,6 @@ rmt usa **single-origin** via Caddy: `/api/*` é roteado para o worker Laravel; 
 - [ ] Tokens Sanctum têm `created_at`/`last_used_at`/`expires_at`
 - [ ] CORS configurado com origin explícito se cliente externo precisar acessar a API
 - [ ] Rota nova privada/autenticada adicionada ao `robots.txt` e cobre `X-Robots-Tag`
+- [ ] Gancho de ledger está dentro da transação do caller com wallet em `lockForUpdate`
+- [ ] `LEDGER_HMAC_KEY` definida em `.env` (não vazia — LedgerService é fail-closed)
+- [ ] Endpoint de ledger/verify retorna 404 (nunca 403) em mismatch de escopo ou hash inexistente

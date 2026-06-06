@@ -67,6 +67,10 @@ Listing ──< Boost (listing_id) ; Listing ─1 activeBoost (hasOne ativo)
 - **Enums**: nenhum
 - **Casts**: `balance_cents → integer`
 - **Fillable**: `user_id`, `balance_cents`
+- **Campos de integridade do ledger** (NÃO estão no `$fillable` — gerenciados exclusivamente pelo `LedgerService`):
+  - `ledger_head_hash` (char(64) nullable) — hash da última entrada da cadeia (âncora anti-truncamento)
+  - `ledger_seq` (uBigInt, default 0) — sequência da última entrada gravada
+- Relação: `ledgerEntries` (HasMany `LedgerEntry`)
 - Saldo disponível em **centavos inteiros** (`bigInteger`, default 0). Uma carteira por usuário (índice unique em `user_id`). Criada no registro (`WalletService::walletFor`).
 
 ### Listing (anúncio)
@@ -98,6 +102,32 @@ Listing ──< Boost (listing_id) ; Listing ─1 activeBoost (hasOne ativo)
 - **Casts**: enums acima, `weight`/`price_cents → integer`, `starts_at`/`expires_at`/`paid_at → datetime`
 - **Fillable**: `listing_id`, `user_id`, `tier`, `weight`, `price_cents`, `payment_method`, `status`, `starts_at`, `expires_at`, `paid_at`
 - `weight` é denormalizado do tier (`BoostTier::weight()`) p/ ordenação por subquery sem `DB::raw`. Scope `active()` = status `active` E `expires_at > now`. Dura `config('marketplace.boost_days', 7)` dias. Índices: `(status, expires_at)`, `listing_id`.
+
+### LedgerEntry (ledger de confiabilidade — append-only)
+
+- **Tabela**: `ledger_entries` (append-only; nunca atualizar ou deletar linhas)
+- **PK**: `id` (BigInt auto-inc)
+- **Relações**: `wallet` (BelongsTo Wallet, `wallet_id`), `user` (BelongsTo User, `user_id` — denormalizado p/ escopo de query)
+- **Enums**: `type → LedgerEntryType`, `direction → LedgerDirection`
+- **Casts**: `type → LedgerEntryType`, `direction → LedgerDirection`, `amount_cents → integer`, `balance_after_cents → integer`, `reference_id → integer`, `seq → integer`, `user_id → integer`
+- **Fillable**: nenhum relevante — criação centralizada via `LedgerService::record`
+- **Campos**:
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `wallet_id` | bigInt FK | carteira dona da linha |
+| `user_id` | bigInt FK | denormalizado do dono da wallet (escopo de query) |
+| `type` | string | `LedgerEntryType` (ver Enums) |
+| `direction` | string | `LedgerDirection` (Credit / Debit) |
+| `amount_cents` | bigInt | sempre positivo |
+| `balance_after_cents` | bigInt | saldo após o movimento |
+| `reference_type` | string(32) nullable | `deposit` \| `order` \| `pix_charge` \| `boost` |
+| `reference_id` | bigInt nullable | PK do objeto referenciado |
+| `seq` | uBigInt | sequência por carteira (começa em 1) |
+| `prev_hash` | char(64) nullable | hash da entrada anterior (null na 1ª linha) |
+| `hash` | char(64) | HMAC-SHA256 desta linha (código de confiabilidade) |
+
+- **Índices**: `unique(wallet_id, seq)`, `unique(hash)`, `index(reference_type, reference_id)`
 
 ### PixCharge (carga de saldo via PushinPay)
 
@@ -149,6 +179,8 @@ Todos string-backed em `app/Enums/`. Coluna no SQL é `string` (nunca `ENUM`), m
 | `BoostStatus` | `boosts.status` | `pending_payment`, `active`, `expired`, `cancelled` |
 | `BoostPaymentMethod` | `boosts.payment_method` | `wallet`, `pix` |
 | `PixChargeStatus` | `pix_charges.status` | `created`, `paid`, `expired`, `canceled` |
+| `LedgerEntryType` | `ledger_entries.type` | `EscrowDebit`, `EscrowReleaseCredit`, `DepositCredit`, `PixTopupCredit`, `BoostDebit` |
+| `LedgerDirection` | `ledger_entries.direction` | `Credit`, `Debit` |
 
 ## Convenções de PK (direção para o domínio)
 

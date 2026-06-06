@@ -26,6 +26,14 @@ user-invocable: false
 > **Nunca** rode `composer dump-autoload` dentro do container `app` com os workers Octane vivos — corrompe o autoloader em memória (erros tipo `Target class [config] does not exist`); use `octane:reload`/restart depois.
 
 - Uploads/perfil/XP: `tests/Feature/Marketplace/ListingTest.php` (foto obrigatória, rejeita não-imagem, edita, stream da foto), `tests/Feature/Profile/ProfileTest.php` (avatar upload+serve, stats, leaderboard), `tests/Feature/Marketplace/XpTest.php` (XP em venda/compra/boost/1º-anúncio, taxa menor p/ vendedor de nível alto), `tests/Unit/XpServiceTest.php`. Imagens: `Storage::fake('local')` + `UploadedFile::fake()->image('p.jpg', w, h)` (host precisa de **GD**, que está carregado). `BoostFactory`/`PixChargeFactory` já existem. Factory **seta `xp`** mesmo sem ser fillable (factories ignoram o guard).
+- Ledger de confiabilidade: `tests/Feature/Wallet/LedgerTest.php` e afins. Padrões:
+  - **Assinatura válida**: após `deposit`/`purchase`/etc., chamar `LedgerService::signatureValid($entry)` → `true`.
+  - **Adulteração detectada**: alterar um campo via `$entry->amount_cents = X; $entry->saveQuietly()` → `signatureValid` retorna `false`.
+  - **Idempotência**: double-confirm ou double-pay (dois requests concorrentes) não cria linha duplicada no ledger — asserir `assertCount(1, ...)` nas entradas.
+  - **IDOR no verify**: usuário estranho em `GET /api/ledger/{hash}/verify` → `assertNotFound()` (404, nunca 403).
+  - **Comando CLI**: `$this->artisan('ledger:verify')->assertExitCode(0)` para cadeia íntegra; `->assertExitCode(1)` após adulteração via `saveQuietly`.
+  - `LEDGER_HMAC_KEY` deve estar definida em `phpunit.xml` (valor de teste).
+- A suíte completa conta **86 testes** (referência para detectar regressão de cobertura).
 - Pagamentos PIX: `tests/Feature/Wallet/PixTopUpTest.php` — usa `Http::fake(['*/api/pix/cashIn' => ..., '*/api/transactions/*' => ...])` p/ o gateway PushinPay e `Queue::fake()` p/ asserir `ProcessPushinPayWebhookJob`. Cobre: gera QR, gateway falho → 503, escopo dono → 404, polling confirma+credita, `confirmPaid` idempotente (credita 1×), webhook token inválido → 404, webhook válido despacha job. Factory `PixChargeFactory` (`->paid()`). **Nunca** chamar a API real da PushinPay em teste — sempre `Http::fake`.
 
 ## Convenção de classe e nomenclatura
