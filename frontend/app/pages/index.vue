@@ -5,9 +5,10 @@
 <template>
   <div>
     <HomeHero />
-    <HomeHowItWorks />
-    <HomeStats />
-    <FeaturedListings />
-    <ListingGrid />
+    <div v-reveal><HomeActivity /></div>
+    <div v-reveal><HomeHowItWorks /></div>
+    <div v-reveal><FeaturedListings /></div>
+    <div v-reveal><HomeStats /></div>
+    <div v-reveal><ListingGrid /></div>
   </div>
 </template>
