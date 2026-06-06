@@ -1,10 +1,21 @@
-/* Tokens da marca (homepage) + tipografia display. */
+/* Tokens da marca (loot/gaming) + tipografia display. */
 :root {
   --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
-  /* Tinta quase-preta puxada pro verde (nunca #000). */
+  /* Superfícies obsidiana (nunca #000). */
+  --bg: #0b0e14;
+  --surf: #141a24;
   --ink: #0a100d;
   --ink-soft: #121b16;
-  --gold: #f3b340;
+  /* Ouro + raridade (loot). */
+  --gold: #f5c542;
+  --rare: #3b82f6;   /* azul · item comum */
+  --epic: #a855f7;   /* roxo · épico */
+  --legend: #fb923c; /* laranja · lendário */
+}
+
+/* Fundo obsidiana global (dark forçado). */
+body {
+  background: var(--bg);
 }
 
 /* Display font nos títulos — dá personalidade sem custar legibilidade no corpo. */
