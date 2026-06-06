@@ -3,8 +3,10 @@ import type { ActivityResponse } from '~/types'
 
 const api = useApi()
 
-// Client-side (server:false). default evita null no primeiro render.
-const { data, refresh } = await useAsyncData<ActivityResponse>(
+// Client-side (server:false), SEM top-level await — componente filho com await
+// vira async component/Suspense (pitfall documentado no vault). default evita
+// null no primeiro render; o feed popula reativo após o mount.
+const { data, refresh } = useAsyncData<ActivityResponse>(
   'activity',
   () => api.get<ActivityResponse>('/activity'),
   { server: false, default: () => ({ data: [], in_escrow_count: 0 }) },
