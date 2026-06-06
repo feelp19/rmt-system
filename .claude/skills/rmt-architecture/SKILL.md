@@ -24,6 +24,37 @@ Request → FormRequest (rules + authorize) → Controller → Service → API R
 - Resposta sempre via API Resource (`app/Http/Resources/`)
 - rmt é API pura — todo endpoint retorna JSON; nenhuma view PHP é renderizada pelo backend
 
+## Domínio marketplace — Services, Policies e escrow
+
+Services em `app/Services/`:
+
+- **`WalletService`** — `walletFor` (firstOrCreate), `deposit`. Depósito é escrita única → `increment()` atômico, **sem** transação (regra 8).
+- **`ListingService`** — `create`, `cancel` (lança `DomainException` se não-ativo).
+- **`OrderService`** — núcleo do escrow:
+  - `purchase(User $buyer, Listing $listing)`: valida (não comprar próprio anúncio, anúncio ativo, saldo). **`DB::beginTransaction` + `lockForUpdate`** no listing e na wallet do comprador (escritas em wallets+orders+listings = tabelas distintas inter-dependentes). Debita comprador, cria Order `awaiting_confirmation`, marca listing `sold`.
+  - `confirmDelivery` / `confirmReceipt` → `registerConfirmation(order, coluna)`: transação + `lockForUpdate` na order, idempotente (no-op se já não está `awaiting_confirmation`). Quando **ambos** `*_confirmed_at` preenchidos → `release`.
+  - `release` (privado): credita `seller_payout_cents` na wallet do vendedor, status → `completed`. A taxa (`fee_cents`, 5% via `config('marketplace.fee_percent')`, `intdiv` em centavos) é retida pela plataforma (MVP não credita conta de plataforma).
+- **Dinheiro sempre em centavos inteiros** — nunca float. Taxa: `intdiv($amountCents * $feePercent, 100)`.
+- **`BoostService`** (destaque pago) — `purchaseWithWallet(User, Listing, BoostTier)`: transação + `lockForUpdate` na carteira, checa boost ativo sob lock, debita preço do tier (`BoostTier::priceCents()`), cria `Boost` ativo (`now` → `+config('marketplace.boost_days')`). Máx. 1 boost ativo/anúncio. Inc 2 (PIX) reusa `createActiveBoost` após confirmação.
+
+**Ordenação por boost sem `DB::raw`** (regra 5): `ListingController::index`/`featured` usam `addSelect(['grid_boost_weight' => Boost::select('weight')->whereColumn('listing_id','listings.id')->active()->...->limit(1)])` + `->orderByDesc($alias)`. Eager load `activeBoost` (HasOne `->active()->latestOfMany()`) p/ o badge. `whereHas('boosts', fn($q)=>$q->active())` filtra o destaque.
+
+## Pagamentos PIX (PushinPay) — integração externa
+
+- **`PushinPayService`** (gateway): `createPix(centavos, webhookUrl)` → `POST {base}/api/pix/cashIn`; `getTransaction(id)` → `GET {base}/api/transactions/{id}`. `Http::withToken(config)->connectTimeout(5)->timeout(15)`; falha → `PushinPayException` (→ 503 no `bootstrap/app.php`). **Octane-safe**: lê `config('services.pushinpay.*')` a cada chamada, sem estado em propriedade. Loga só `status`/`id`, nunca o payload.
+- **`PixChargeService`**: `createForTopUp` (cria cobrança + `PixCharge` `created`, `expires_at=+30min`); `refreshFromGateway` (re-consulta status — **fonte autoritativa**); `confirmPaid` (transação + lock no charge **e** na wallet, credita **uma vez** — idempotente via guard de status); `handleWebhookById` (usado pelo job).
+- **Webhook sem HMAC** (a PushinPay não assina): defesa em camadas — (1) secret na URL (`/webhooks/pushinpay/{token}`, `hash_equals`, mismatch → 404); (2) **nunca confiar no corpo** — pega só o `id` e o job re-consulta o status pela API; (3) idempotência (`pushinpay_id` unique + guard de status). Ver [[ADR — webhook PushinPay sem assinatura]].
+- **Jobs (fila `payments`, supervisor `supervisor-payments` no `config/horizon.php`)**:
+  - `ProcessPushinPayWebhookJob` — `tries=5`, `backoff`, re-verifica + credita (idempotente).
+  - `ReconcilePendingPixChargesJob` — agendado (`everyFiveMinutes` em `routes/console.php`), `WithoutOverlapping` (`releaseAfter`/`expireAfter`/`dontRelease`): expira vencidas + re-consulta pendentes (fallback caso o webhook não chegue).
+  - `ExpireBoostsJob` — diário, marca boosts vencidos `expired`.
+- **Confirmação local sem webhook público**: `PixChargeController::show` re-consulta o gateway (throttle 3s via `Cache::lock`) enquanto `created` — o frontend faz polling. Em prod o webhook + reconcile cobrem.
+- ⚠️ Os jobs agendados exigem um runner de scheduler (`schedule:work`/cron) — hoje não há container dedicado; o `show` on-demand cobre o fluxo local.
+
+Policies (auto-discovery Laravel): **`ListingPolicy`** (`create` qualquer auth, `delete` só dono) e **`OrderPolicy`** (`view` partes, `confirmDelivery` vendedor, `confirmReceipt` comprador). Controllers escopam a query por participante (`buyer_id`/`seller_id`) e `firstOrFail` → 404 para estranho; papel errado dentro do pedido → `$this->authorize(...)` → 403.
+
+`DomainException` → 422 JSON (mapeado em `bootstrap/app.php`).
+
 ## Nuances de Eloquent
 
 - Sempre Eloquent ORM; `DB::table`/`DB::raw` apenas com comentário justificando

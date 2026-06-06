@@ -19,7 +19,7 @@ rmt-system é um scaffold de aplicação full-stack API + SSR com arquitetura de
 
 - **Backend**: Laravel 13 API-only (sem views Blade; frontend desacoplado via Nuxt)
 - **Frontend**: Nuxt 4 SSR com PrimeVue
-- **Domínio ainda mínimo (sem entidades de negócio além de User). As convenções abaixo são direção para quando o domínio crescer.**
+- **Domínio**: marketplace de itens/gold de jogos com **escrow de dupla confirmação** + taxa de 5% (MVP). Entidades: `User`, `Wallet`, `Listing`, `Order`. Ver `rmt-schema` para o modelo de dados e `rmt-architecture` para o fluxo do escrow (`OrderService`).
 
 ## Stack
 
@@ -39,8 +39,25 @@ rmt-system é um scaffold de aplicação full-stack API + SSR com arquitetura de
 ## Áreas do sistema
 
 ### API (`routes/api.php`)
-- `GET /api/health` — health check público, retorna `{"status":"ok"}`
-- `GET /api/user` — usuário autenticado (middleware `auth:sanctum`)
+
+Público:
+- `GET /api/health` — health check, retorna `{"status":"ok"}`
+- `POST /api/register` · `POST /api/login` — auth Sanctum (token Bearer), `throttle:10,1`. `register` cria a `Wallet`.
+- `GET /api/listings` · `GET /api/listings/{id}` — vitrine de anúncios ativos (paginada; boostados intermediário/avançado flutuam pro topo)
+- `GET /api/listings/featured` — faixa "Em destaque": anúncios com boost ativo, ordem por tier
+
+Autenticado (`auth:sanctum`):
+- `GET /api/me` · `POST /api/logout` · `GET /api/user`
+- `GET /api/wallet` · `POST /api/wallet/deposit` — carteira + top-up demo (`throttle:30,1`)
+- `POST /api/wallet/pix` · `GET /api/wallet/pix/{id}` — carregar saldo via PIX (PushinPay): cria cobrança + polling do status (confirma on-demand)
+- `POST /api/webhooks/pushinpay/{token}` — webhook público da PushinPay (autenticidade pelo secret na URL + re-verificação no job; sem auth:sanctum)
+- `POST /api/listings` · `DELETE /api/listings/{id}` — criar / cancelar anúncio próprio
+- `POST /api/listings/{id}/boosts` — turbinar anúncio próprio (boost pago; Inc 1: carteira, `throttle:30,1`)
+- `GET /api/orders` · `POST /api/orders` — listar / comprar (gera escrow)
+- `GET /api/orders/{id}`
+- `POST /api/orders/{id}/confirm-delivery` (vendedor) · `POST /api/orders/{id}/confirm-receipt` (comprador) — dupla confirmação; ambos → libera escrow
+
+Controllers em `app/Http/Controllers/{Auth,Wallet,Marketplace}/`. Respostas via Resources em `app/Http/Resources/{User,Wallet,Marketplace}/`. Listagens usam envelope paginado (`response()->json($paginator->through(...))`); mutações/leitura única usam `{ "data": ... }`.
 
 ### Frontend (`frontend/`)
 - Nuxt 4 SSR com PrimeVue Aura

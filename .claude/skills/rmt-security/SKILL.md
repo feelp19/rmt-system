@@ -17,6 +17,25 @@ user-invocable: false
 
 **Backend é a autoridade. Frontend só melhora UX.**
 
+## Dinheiro e escrow (marketplace)
+
+- **Valores sempre em centavos inteiros** (`bigInteger`) — nunca float. Taxa via `intdiv`, determinística.
+- **Saldo/escrow são fluxos críticos**: `purchase` e `release` usam `DB::beginTransaction` + `lockForUpdate` (na wallet e na order/listing) para evitar venda dupla, saldo negativo e liberação dupla sob concorrência Octane.
+- **Idempotência**: confirmar entrega/recebimento duas vezes é no-op; `release` só roda uma vez (guard `status === awaiting_confirmation` dentro do lock).
+- **Nunca aceitar `buyer_id`/`seller_id`/valores do request** — comprador vem de `auth()`, vendedor e preço vêm do `Listing` carregado no servidor (cliente não forja preço).
+- **Order escopada por participante**: `where(buyer_id = me OR seller_id = me)->firstOrFail()` → 404 para estranho; papel errado (comprador tentando confirmar entrega) → Policy → 403.
+- Tokens Sanctum emitidos com `expires_at` (30 dias) — lifecycle obrigatório.
+
+## Webhook PushinPay (PIX) — gateway SEM assinatura
+
+A PushinPay **não assina** o webhook (sem HMAC). Modelo de confiança adotado:
+
+1. **Secret na URL**: rota `/api/webhooks/pushinpay/{token}`; `hash_equals($token, config('services.pushinpay.webhook_secret'))`, mismatch → **404** (anti-enumeração). Secret só em `.env` (`PUSHINPAY_WEBHOOK_SECRET`).
+2. **Nunca confiar no corpo** (rmt-security: "re-buscar do servidor usando o identificador"): o controller pega só o `id` e despacha job; o job chama `getTransaction(id)` (fonte autoritativa) antes de creditar.
+3. **Idempotência**: `pix_charges.pushinpay_id` **unique** + `confirmPaid` com guard de status sob `lockForUpdate` → credita a carteira **uma vez** mesmo com webhook + reconcile + polling competindo.
+4. **Sempre 200** ao webhook (mesmo desconhecido/já processado) — não induzir re-tentativa por erro de parse nosso. Rota com `throttle`.
+5. Token PushinPay e webhook secret **só em `.env`** (gitignored), lidos via `config('services.pushinpay.*')` — nunca hardcoded, nunca em resposta/log. `Http::` loga só `status`/`id`.
+
 ## Regras obrigatórias — endpoint e autorização
 
 - Controller é thin wrapper: `FormRequest` + `authorize()` + Service

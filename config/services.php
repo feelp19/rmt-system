@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'pushinpay' => [
+        'token' => env('PUSHINPAY_TOKEN'),
+        'base_url' => env('PUSHINPAY_BASE_URL', 'https://api-sandbox.pushinpay.com.br'),
+        'webhook_secret' => env('PUSHINPAY_WEBHOOK_SECRET'),
+    ],
+
 ];
