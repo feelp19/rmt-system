@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\LedgerDirection;
+use App\Enums\LedgerEntryType;
 use App\Enums\PixChargeStatus;
 use App\Models\PixCharge;
 use App\Models\User;
@@ -13,6 +15,7 @@ class PixChargeService
     public function __construct(
         private readonly PushinPayService $gateway,
         private readonly WalletService $wallets,
+        private readonly LedgerService $ledger,
     ) {}
 
     /** Gera uma cobrança PIX para carregar saldo na carteira do usuário. */
@@ -82,6 +85,16 @@ class PixChargeService
             // Carteira garantida em createForTopUp + no registro — sem create sob lock.
             $wallet = Wallet::where('user_id', $locked->user_id)->lockForUpdate()->firstOrFail();
             $wallet->increment('balance_cents', $locked->amount_cents);
+
+            $this->ledger->record(
+                $wallet,
+                LedgerEntryType::PixTopupCredit,
+                LedgerDirection::Credit,
+                $locked->amount_cents,
+                $wallet->balance_cents,
+                'pix_charge',
+                $locked->id,
+            );
 
             $locked->update([
                 'status' => PixChargeStatus::Paid,
