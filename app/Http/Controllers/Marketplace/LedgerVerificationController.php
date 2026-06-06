@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Marketplace\LedgerVerificationResource;
 use App\Models\LedgerEntry;
 use App\Models\Order;
 use App\Services\LedgerService;
@@ -26,15 +27,8 @@ class LedgerVerificationController extends Controller
         }
 
         return response()->json([
-            'data' => [
-                'valid' => $this->ledger->verifyEntry($entry),
-                'type' => $entry->type->value,
-                'direction' => $entry->direction->value,
-                'amount_cents' => $entry->amount_cents,
-                'reference_type' => $entry->reference_type,
-                'reference_id' => $entry->reference_id,
-                'created_at' => $entry->created_at,
-            ],
+            'data' => LedgerVerificationResource::make($entry, $this->ledger->verifyEntry($entry))
+                ->resolve($request),
         ]);
     }
 

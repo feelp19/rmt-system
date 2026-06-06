@@ -32,6 +32,7 @@ class LedgerEntry extends Model
         return [
             'type' => LedgerEntryType::class,
             'direction' => LedgerDirection::class,
+            'user_id' => 'integer',
             'amount_cents' => 'integer',
             'balance_after_cents' => 'integer',
             'reference_id' => 'integer',
