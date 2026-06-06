@@ -26,6 +26,7 @@ Ponto de entrada do vault. Use isto antes de mergulhar em pastas. Cada cluster l
 
 ## Features
 
+- [[2026-06-06 ledger-confiabilidade-transacoes]] — ledger append-only com HMAC-SHA256 encadeado por carteira: "código de confiabilidade" por transação, verificável via API e CLI
 - [[2026-06-05 marketplace-escrow-mvp]] — marketplace de itens/gold com escrow de dupla confirmação + taxa 5% (MVP)
 - [[2026-06-05 homepage]] — homepage combinada (hero + como funciona + stats + vitrine), gaming-bold
 - [[2026-06-05 boost-destaque-inc1]] — boost pago (3 pacotes) + área "Em destaque", pago por carteira (Inc 1; PIX no Inc 2)
@@ -38,6 +39,7 @@ Ponto de entrada do vault. Use isto antes de mergulhar em pastas. Cada cluster l
 
 ## Decisões Arquiteturais Fundacionais
 
+- [[ADR — ledger de confiabilidade HMAC encadeado]] — HMAC-SHA256 + cadeia prev_hash por carteira: prova legitimidade, detecta adulteração/deleção, sem lock global
 - [[ADR — escrow dupla-confirmacao e carteira simulada]] — carteira interna em centavos + escrow retido na Order, liberado só com dupla confirmação
 - [[ADR — webhook PushinPay sem assinatura]] — confiar no PIX sem HMAC: secret na URL + re-verificação por id + idempotência
 
