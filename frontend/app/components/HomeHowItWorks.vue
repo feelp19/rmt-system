@@ -43,7 +43,7 @@ const steps = [
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--p-primary-color);
+  color: var(--gold);
 }
 .heading {
   margin: 0 0 2.5rem;
@@ -70,8 +70,8 @@ const steps = [
   left: 4%;
   right: 4%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--p-primary-color) 18%, var(--p-primary-color) 82%, transparent);
-  opacity: 0.28;
+  background: linear-gradient(90deg, transparent, var(--gold) 18%, var(--gold) 82%, transparent);
+  opacity: 0.32;
 }
 
 .num {
