@@ -16,7 +16,7 @@ user-invocable: false
 
 **Composables** (`app/composables/`): `useApi()` (get/post/del com `Authorization: Bearer` lido do cookie `rmt_token`), `useAuth()` (token em cookie + `user` em `useState`, `login`/`register`/`logout`/`fetchMe`, `isAuthenticated`), `useWallet()` (saldo em `useState` + `refresh`/`deposit`). O scaffold `useAPI()` (useFetch) segue existindo para GET SSR simples.
 
-**Utils** (`app/utils/`): `formatCents` (centavos → R$) e `reaisToCents`. Dinheiro trafega em **centavos inteiros**; a UI usa `InputNumber mode="currency"` em reais e converte na borda.
+**Utils** (`app/utils/`): `formatCents` (centavos → R$) e `reaisToCents`. Dinheiro trafega em **centavos inteiros**; a UI usa `InputNumber mode="currency"` em reais e converte na borda. `rarityFor(listing)` → `'gold'|'rare'|'epic'|'legend'` (boost tier manda: advanced→legend, intermediate→epic, basic→rare; senão gold se type=gold, rare se item). `RARITY_VAR` mapeia raridade → variável CSS (`--gold`, `--rare`, `--epic`, `--legend`).
 
 **Auth**: token Bearer em cookie `rmt_token`. Plugin `auth.client.ts` hidrata o usuário no browser. Rotas privadas usam `definePageMeta({ middleware: 'auth' })` (`middleware/auth.ts` checa o cookie).
 
@@ -24,9 +24,11 @@ user-invocable: false
 
 **Carga de saldo (PIX/PushinPay)**: `DepositDialog` tem 2 caminhos — "Gerar PIX" (`POST /wallet/pix` → mostra QR via `<Image :src="qr_code_base64">` + copia-e-cola com `navigator.clipboard` guardado por `import.meta.client`, e faz **polling** `GET /wallet/pix/{id}` a cada 3s até `status=paid` → `refreshWallet`; limpa o `setInterval` em `watch(visible)` e `onUnmounted`) e "Crédito demo (instantâneo)" (`POST /wallet/deposit`, p/ testar sem pagar no sandbox).
 
-**Components** (`app/components/`): `AppHeader`, `AuthCard` (Tabs login/registro), `ListingCard` (comprar; hover glow; badge "Turbinado" + botão "Turbinar" no anúncio próprio), `ListingFormDialog`, `WalletPanel` + `DepositDialog`, `OrderCard` (dupla confirmação por papel), `ListingGrid` (vitrine + dialog de criar), `FeaturedListings` (faixa "Em destaque" = boostados), `BoostDialog` (escolhe tier via `SelectButton` + paga c/ carteira; `refreshNuxtData(['listings','featured'])` no sucesso), e a homepage `HomeHero` / `HomeHowItWorks` / `HomeStats`. **Pages** (`app/pages/`): `index` (homepage combinada = Hero + ComoFunciona + Stats + ListingGrid), `login`, `wallet`, `orders` — finas, só montam componentes.
+**Components** (`app/components/`): `AppHeader`, `AuthCard` (Tabs login/registro), `ListingCard` (comprar; borda/glow/preço por raridade via `--rar = rarityFor(listing)`; badge "Turbinado" + botão "Turbinar" no anúncio próprio), `ListingFormDialog`, `WalletPanel` + `DepositDialog`, `OrderCard` (dupla confirmação por papel), `ListingGrid` (vitrine + dialog de criar), `FeaturedListings` (faixa "Loot em alta" = boostados), `BoostDialog` (escolhe tier via `SelectButton` + paga c/ carteira; `refreshNuxtData(['listings','featured'])` no sucesso), e a homepage `HomeHero` / `HomeActivity` / `HomeHowItWorks` / `HomeStats`. **Pages** (`app/pages/`): `index` (homepage combinada = Hero + Activity + ComoFunciona + FeaturedListings + Stats + ListingGrid), `login`, `wallet`, `orders` — finas, só montam componentes.
 
-**Homepage (`/`)**: vibe "gaming-bold", paleta comprometida **verde-ink + verde elétrico (`--p-primary-color`) + ouro (`--gold`)** (tema gold-trading). Tipografia display **Bricolage Grotesque** (Google Fonts via `app.head` no `nuxt.config`; aplicada a `h1/h2/h3` em `app/assets/css/main.css` que também define `--ink`/`--gold`). `HomeHero` = full-bleed (`width:100vw; margin-inline:calc(50% - 50vw)`; layout tem `overflow-x:clip`), assimétrico, type em `clamp()`, **showcase de cards de produto** flutuando, reveal escalonado com `cubic-bezier(0.16,1,0.3,1)` sob `@media (prefers-reduced-motion: no-preference)`. `HomeHowItWorks` = fluxo numerado (numerais com `-webkit-text-stroke`, trilho conector) — **não** são cards idênticos. `HomeStats` = banda escura de confiança + chips de jogos — **não** é template de hero-metric. `HomeStats` lê o cache da vitrine via `useNuxtData('listings')`. Botão "Anunciar" do `HomeHero`/`ListingGrid` compartilham `useState('show_listing_form')`. "Ver vitrine" = `scrollIntoView('#vitrine')` (`import.meta.client`).
+**`HomeActivity.vue`** (novo): ticker de atividade recente + contador "X em escrow agora". Usa `useAsyncData('activity', () => $fetch('/api/activity'), { server: false })` — **sem top-level await** (componente, não página). Auto-refresh a cada 18s via `setInterval` limpo em `onUnmounted`; guarda o timer sob `import.meta.client`.
+
+**Homepage (`/`)**: vibe "gaming-bold loot/dark". **Tema global dark** forçado via `app.head.htmlAttrs.class: 'app-dark'` + `darkModeSelector: '.app-dark'` no preset PrimeVue. Cor primária **ouro** (`#F5C542`), definida via `definePreset` em `nuxt.config.ts` (escala 50–950, `contrastColor` escuro para contraste AA). Tipografia display **Bricolage Grotesque** (Google Fonts via `app.head`; aplicada a `h1/h2/h3`). **Tokens em `app/assets/css/main.css`**: `--bg` (fundo escuro), `--surf` (superfície), `--ink`/`--ink-soft` (texto), `--gold` (acento primário), `--rare` (azul), `--epic` (roxo), `--legend` (laranja). Classes `.reveal-init/.reveal-in` para animação de entrada. `HomeHero` = full-bleed (`width:100vw; margin-inline:calc(50% - 50vw)`; layout tem `overflow-x:clip`), assimétrico, type em `clamp()`, **showcase de cards de produto** flutuando; spotlight no mouse (rAF), aurora animada (`.hero::after`), sheen nos CTAs — tudo sob `@media (prefers-reduced-motion: no-preference)`. `HomeHowItWorks`/`HomeStats` recoloridos: kicker/trilho ouro, banda Stats com glow épico+ouro. `HomeStats` lê o cache da vitrine via `useNuxtData('listings')`. **Diretiva `v-reveal`**: plugin **universal** `app/plugins/reveal.ts` (IntersectionObserver, respeita `prefers-reduced-motion`); as 5 seções pós-hero entram com `v-reveal`. ⚠️ **Pitfall SSR**: diretiva custom usada em template SSR (a home é SSR) **não pode** viver em plugin `.client` — no server `resolveDirective` retorna `undefined` e `ssrGetDirectiveProps` quebra com *"Cannot read properties of undefined (reading 'getSSRProps')"* → **500**. Registrar universal (sem `.client`) + `getSSRProps() { return {} }`; `mounted`/`unmounted` já rodam só no client. Build passa mesmo quebrado — só explode no SSR runtime; validar com a app rodando (`curl localhost`), não só `npm run build`. Botão "Anunciar" do `HomeHero`/`ListingGrid` compartilham `useState('show_listing_form')`. "Ver vitrine" = `scrollIntoView('#vitrine')` (`import.meta.client`).
 
 > **Bans de design (skill `impeccable`)** respeitados na home: nada de **gradient text** (`background-clip:text`), nada de hero-metric template, nada de grade de cards idênticos. Realce = cor sólida + sublinhado `box-shadow inset`, nunca gradiente no texto.
 
@@ -46,7 +48,7 @@ user-invocable: false
 | Composables | `frontend/app/composables/` (auto-import) |
 | Config Nuxt | `frontend/nuxt.config.ts` |
 | UI | **PrimeVue 4** via `@primevue/nuxt-module` — auto-import ON |
-| Tema | Preset **Aura** (`@primeuix/themes/aura`), `darkModeSelector: 'system'` |
+| Tema | Preset **Aura** customizado via `definePreset` (primário ouro `#F5C542`), dark global forçado (`.app-dark`), `darkModeSelector: '.app-dark'` |
 | Ícones | `primeicons` — classe `pi pi-<nome>` (css global: `primeicons/primeicons.css`) |
 | Vue | Vue 3 com `<script setup>` (sem Options API) |
 
@@ -151,10 +153,11 @@ Usar **sempre** o componente PrimeVue adequado. HTML cru só quando PrimeVue nã
 
 ## Tema e estilo
 
-- Preset **Aura** importado em `nuxt.config.ts` via `@primeuix/themes/aura`.
-- `darkModeSelector: 'system'` — tema dark ativa automaticamente pelo `prefers-color-scheme` do OS.
+- Preset **Aura** customizado via `definePreset` em `nuxt.config.ts`: cor primária **ouro** (`#F5C542`, escala 50–950, `contrastColor` escuro para AA).
+- `darkModeSelector: '.app-dark'` — dark **forçado** no app inteiro via `app.head.htmlAttrs.class: 'app-dark'` (não depende de `prefers-color-scheme`).
 - `cssLayer: false` — tokens PrimeVue não ficam em `@layer`, portanto têm especificidade normal.
 - `ripple: true` — efeito ripple global nos componentes interativos.
+- **Tokens de marca** em `app/assets/css/main.css`: `--bg`, `--surf`, `--ink`, `--ink-soft`, `--gold`, `--rare` (azul), `--epic` (roxo), `--legend` (laranja). Raridade de listing mapeada via `rarityFor(listing)` + `RARITY_VAR` (`app/utils/rarity.ts`).
 - Prefira as props de estilo e classes de severidade do PrimeVue (`severity`, `outlined`, `text`, `size`) ao invés de CSS custom.
 - Só adicione `<style scoped>` quando os tokens do PrimeVue forem insuficientes; evite sobrescrever variáveis CSS internas do tema.
 - Ícones: `pi pi-<nome>` (ver lista em https://primevue.org/icons). Não instale outras libs de ícones.

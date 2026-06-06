@@ -20,7 +20,7 @@ const onBought = async () => {
 <template>
   <!-- Só renderiza quando há anúncios turbinados. -->
   <section v-if="featured.length" class="featured">
-    <h2><i class="pi pi-bolt" /> Em destaque</h2>
+    <h2><i class="pi pi-bolt" /> Loot em alta</h2>
     <div class="row">
       <ListingCard
         v-for="listing in featured"
@@ -43,7 +43,7 @@ const onBought = async () => {
   margin: 0 0 1.25rem;
 }
 .featured h2 i {
-  color: var(--p-primary-color);
+  color: var(--gold);
 }
 /* Faixa horizontal rolável — PrimeVue não tem primitivo de carrossel simples de cards. */
 .row {

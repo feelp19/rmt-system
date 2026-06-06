@@ -44,7 +44,8 @@ const games = [
   border-radius: 1.25rem;
   color: #eaf2ee;
   background:
-    radial-gradient(560px 320px at 88% 0%, color-mix(in srgb, var(--p-primary-color) 26%, transparent), transparent 70%),
+    radial-gradient(560px 320px at 88% 0%, color-mix(in srgb, var(--epic) 22%, transparent), transparent 70%),
+    radial-gradient(420px 280px at 5% 100%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 70%),
     linear-gradient(150deg, var(--ink) 0%, var(--ink-soft) 100%);
 }
 .inner {
@@ -58,8 +59,8 @@ const games = [
   color: #f6faf8;
 }
 .hl {
-  color: var(--p-primary-color);
-  box-shadow: inset 0 -0.16em 0 color-mix(in srgb, var(--gold) 55%, transparent);
+  color: var(--gold);
+  box-shadow: inset 0 -0.16em 0 color-mix(in srgb, var(--gold) 45%, transparent);
 }
 .sub {
   margin: 0 0 1.5rem;
@@ -72,10 +73,7 @@ const games = [
   font-size: 0.95rem;
   color: #9fb3a8;
 }
-.meta strong {
-  color: var(--p-primary-color);
-  font-size: 1.15rem;
-}
+.meta strong { color: var(--gold); font-size: 1.15rem; }
 .sep {
   margin: 0 0.6rem;
   opacity: 0.45;

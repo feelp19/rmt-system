@@ -33,7 +33,8 @@ user-invocable: false
   - **IDOR no verify**: usuário estranho em `GET /api/ledger/{hash}/verify` → `assertNotFound()` (404, nunca 403).
   - **Comando CLI**: `$this->artisan('ledger:verify')->assertExitCode(0)` para cadeia íntegra; `->assertExitCode(1)` após adulteração via `saveQuietly`.
   - `LEDGER_HMAC_KEY` deve estar definida em `phpunit.xml` (valor de teste).
-- A suíte completa conta **86 testes** (referência para detectar regressão de cobertura).
+- **Feed público sem autenticação**: `tests/Feature/Marketplace/ActivityTest.php` — asserir que a resposta de `GET /api/activity` **nunca contém** chaves `buyer_id`, `buyer_name` nem qualquer PII do comprador (usa `assertEqualsCanonicalizing` nas chaves de cada item do `data`). Só pedidos `completed` aparecem; `in_escrow_count` conta `awaiting_confirmation`. `setUp` faz `Cache::flush()` (o feed é cacheado 15s — sem flush, o array store contamina entre métodos).
+- A suíte completa conta **91 testes** (referência para detectar regressão de cobertura).
 - Pagamentos PIX: `tests/Feature/Wallet/PixTopUpTest.php` — usa `Http::fake(['*/api/pix/cashIn' => ..., '*/api/transactions/*' => ...])` p/ o gateway PushinPay e `Queue::fake()` p/ asserir `ProcessPushinPayWebhookJob`. Cobre: gera QR, gateway falho → 503, escopo dono → 404, polling confirma+credita, `confirmPaid` idempotente (credita 1×), webhook token inválido → 404, webhook válido despacha job. Factory `PixChargeFactory` (`->paid()`). **Nunca** chamar a API real da PushinPay em teste — sempre `Http::fake`.
 
 ## Convenção de classe e nomenclatura

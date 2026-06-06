@@ -17,6 +17,9 @@ const isOwn = computed(() => user.value?.id === props.listing.seller?.id)
 const typeLabel = computed(() => (props.listing.type === 'gold' ? 'Gold' : 'Item'))
 const sellerInitial = computed(() => (props.listing.seller?.name ?? '?').charAt(0).toUpperCase())
 
+const rarity = computed(() => rarityFor(props.listing))
+const rarityVar = computed(() => RARITY_VAR[rarity.value])
+
 const buy = async () => {
   buying.value = true
   try {
@@ -60,7 +63,7 @@ const removeListing = () => {
 </script>
 
 <template>
-  <Card class="listing-card">
+  <Card class="listing-card" :class="`rar-${rarity}`" :style="{ '--rar': rarityVar }">
     <template #header>
       <div class="thumb">
         <img v-if="listing.photo_url" :src="listing.photo_url" :alt="listing.title" loading="lazy" />
@@ -116,15 +119,25 @@ const removeListing = () => {
 </template>
 
 <style scoped>
-/* Hover "gaming": leve elevação + glow no accent do tema (regra 12 — efeito não coberto pelo Card). */
+/* Hover "gaming": leve elevação + glow por raridade (regra 12 — efeito não coberto pelo Card). */
 .listing-card {
   height: 100%;
   overflow: hidden;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid color-mix(in srgb, var(--rar) 35%, transparent);
 }
+/* Glow de raridade no hover (cor, sem movimento) — sempre ativo. */
 .listing-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--p-primary-color) 55%, transparent);
+  box-shadow: 0 14px 32px -12px color-mix(in srgb, var(--rar) 55%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--rar) 55%, transparent);
+}
+/* Lift + transição só quando o usuário permite motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .listing-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .listing-card:hover {
+    transform: translateY(-4px);
+  }
 }
 .thumb {
   position: relative;
@@ -179,6 +192,6 @@ const removeListing = () => {
 }
 .price {
   font-size: 1.25rem;
-  color: var(--p-primary-color);
+  color: var(--rar);
 }
 </style>

@@ -45,6 +45,7 @@ Público:
 - `POST /api/register` · `POST /api/login` — auth Sanctum (token Bearer), `throttle:10,1`. `register` cria a `Wallet`.
 - `GET /api/listings` · `GET /api/listings/{id}` — vitrine de anúncios ativos (paginada; boostados intermediário/avançado flutuam pro topo)
 - `GET /api/listings/featured` — faixa "Em destaque": anúncios com boost ativo, ordem por tier
+- `GET /api/activity` — feed público de atividade recente (`throttle:60,1`); retorna `{ data: [{ type, game, title, amount_cents, completed_at, seller_name }], in_escrow_count }`; **nunca expõe comprador**; cache Redis 15s
 
 Autenticado (`auth:sanctum`):
 - `GET /api/me` · `POST /api/logout` · `GET /api/user`
@@ -63,7 +64,7 @@ Autenticado (`auth:sanctum`):
 - `GET /api/wallet/ledger` — extrato paginado do ledger de confiabilidade, escopado por `user_id` (`throttle:60,1`)
 - `GET /api/ledger/{hash}/verify` — verifica integridade de uma entrada do ledger; escopo: dono da wallet ou contraparte da order (`throttle:60,1`)
 
-Controllers em `app/Http/Controllers/{Auth,Wallet,Marketplace}/`. Respostas via Resources em `app/Http/Resources/{User,Wallet,Marketplace}/`. Listagens usam envelope paginado (`response()->json($paginator->through(...))`); mutações/leitura única usam `{ "data": ... }`.
+Controllers em `app/Http/Controllers/{Auth,Wallet,Marketplace}/` + `Marketplace\ActivityController`. Respostas via Resources em `app/Http/Resources/{User,Wallet,Marketplace}/`. Listagens usam envelope paginado (`response()->json($paginator->through(...))`); mutações/leitura única usam `{ "data": ... }`.
 
 ### Frontend (`frontend/`)
 - Nuxt 4 SSR com PrimeVue Aura

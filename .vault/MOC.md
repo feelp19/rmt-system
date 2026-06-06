@@ -1,6 +1,6 @@
 ---
 type: moc
-updated: 2026-06-03
+updated: 2026-06-06
 ---
 
 # MOC — Map of Content
@@ -26,6 +26,7 @@ Ponto de entrada do vault. Use isto antes de mergulhar em pastas. Cada cluster l
 
 ## Features
 
+- [[2026-06-06 homepage-redesign-loot]] — redesign loot/RPG da home: tema ouro global, dark forçado, tokens de raridade, feed ao vivo HomeActivity, efeitos máximo (spotlight/aurora/sheen), backend GET /api/activity
 - [[2026-06-06 ledger-confiabilidade-transacoes]] — ledger append-only com HMAC-SHA256 encadeado por carteira: "código de confiabilidade" por transação, verificável via API e CLI
 - [[2026-06-05 marketplace-escrow-mvp]] — marketplace de itens/gold com escrow de dupla confirmação + taxa 5% (MVP)
 - [[2026-06-05 homepage]] — homepage combinada (hero + como funciona + stats + vitrine), gaming-bold
@@ -39,6 +40,7 @@ Ponto de entrada do vault. Use isto antes de mergulhar em pastas. Cada cluster l
 
 ## Decisões Arquiteturais Fundacionais
 
+- [[ADR — rebrand ouro e dark global]] — primary verde→ouro + dark mode forçado em todo o app: identidade gaming coesa, contrastColor explícito, tokens de raridade
 - [[ADR — ledger de confiabilidade HMAC encadeado]] — HMAC-SHA256 + cadeia prev_hash por carteira: prova legitimidade, detecta adulteração/deleção, sem lock global
 - [[ADR — escrow dupla-confirmacao e carteira simulada]] — carteira interna em centavos + escrow retido na Order, liberado só com dupla confirmação
 - [[ADR — webhook PushinPay sem assinatura]] — confiar no PIX sem HMAC: secret na URL + re-verificação por id + idempotência

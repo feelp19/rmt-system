@@ -96,3 +96,17 @@ export interface Paginated<T> {
   last_page: number
   total: number
 }
+
+export interface ActivityItem {
+  type: ListingType
+  game: string
+  title: string
+  amount_cents: number
+  completed_at: string
+  seller_name: string
+}
+
+export interface ActivityResponse {
+  data: ActivityItem[]
+  in_escrow_count: number
+}

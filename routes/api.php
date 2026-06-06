@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Marketplace\ActivityController;
 use App\Http\Controllers\Marketplace\BoostController;
 use App\Http\Controllers\Marketplace\LedgerVerificationController;
 use App\Http\Controllers\Marketplace\ListingController;
@@ -28,6 +29,7 @@ Route::get('/listings/{listing}', [ListingController::class, 'show'])->whereNumb
 Route::get('/listings/{listing}/photo', [ListingController::class, 'photo'])->whereNumber('listing'); // stream da foto
 Route::get('/users/{user}/avatar', [ProfileController::class, 'avatar'])->whereNumber('user'); // stream do avatar
 Route::get('/leaderboard', [ProfileController::class, 'leaderboard']); // ranking por XP
+Route::get('/activity', [ActivityController::class, 'index'])->middleware('throttle:60,1'); // feed público da home (cacheado 15s)
 
 // ─── Área autenticada ─────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
