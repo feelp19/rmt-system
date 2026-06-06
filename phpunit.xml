@@ -31,5 +31,6 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="LEDGER_HMAC_KEY" value="test-ledger-hmac-key-do-not-use-in-prod-0123456789abcdef"/>
     </php>
 </phpunit>
