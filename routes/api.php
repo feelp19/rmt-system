@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Marketplace\BoostController;
+use App\Http\Controllers\Marketplace\LedgerVerificationController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\Marketplace\OrderController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Wallet\PixChargeController;
 use App\Http\Controllers\Wallet\WalletController;
+use App\Http\Controllers\Wallet\WalletLedgerController;
 use App\Http\Controllers\Webhooks\PushinPayWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/me/avatar', [ProfileController::class, 'uploadAvatar'])->middleware('throttle:20,1');
 
     Route::get('/wallet', [WalletController::class, 'show']);
+    Route::get('/wallet/ledger', [WalletLedgerController::class, 'index'])->middleware('throttle:60,1');
     Route::post('/wallet/deposit', [WalletController::class, 'deposit'])->middleware('throttle:30,1');
     // Carregar saldo via PIX (PushinPay): cria a cobrança + polling do status.
     Route::post('/wallet/pix', [PixChargeController::class, 'store'])->middleware('throttle:20,1');
@@ -50,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/listings/{listing}', [ListingController::class, 'destroy'])->whereNumber('listing')->middleware('throttle:20,1');
     // Turbinar anúncio próprio (boost pago — Inc 1: carteira).
     Route::post('/listings/{listing}/boosts', [BoostController::class, 'store'])->whereNumber('listing')->middleware('throttle:30,1');
+
+    Route::get('/ledger/{hash}/verify', [LedgerVerificationController::class, 'show'])
+        ->whereAlphaNumeric('hash')->middleware('throttle:60,1');
 
     Route::get('/orders', [OrderController::class, 'index']);
     // Mutações financeiras: rate-limited (defesa contra abuso/flood).

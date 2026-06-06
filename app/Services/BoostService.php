@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\BoostPaymentMethod;
 use App\Enums\BoostStatus;
 use App\Enums\BoostTier;
+use App\Enums\LedgerDirection;
+use App\Enums\LedgerEntryType;
 use App\Models\Boost;
 use App\Models\Listing;
 use App\Models\User;
@@ -14,7 +16,10 @@ use Illuminate\Support\Facades\DB;
 
 class BoostService
 {
-    public function __construct(private readonly XpService $xp) {}
+    public function __construct(
+        private readonly XpService $xp,
+        private readonly LedgerService $ledger,
+    ) {}
 
     /**
      * Compra um boost pagando com o saldo da carteira do anunciante.
@@ -46,6 +51,17 @@ class BoostService
             $wallet->decrement('balance_cents', $priceCents);
 
             $boost = $this->createActiveBoost($listing, $user, $tier, BoostPaymentMethod::Wallet);
+
+            $this->ledger->record(
+                $wallet,
+                LedgerEntryType::BoostDebit,
+                LedgerDirection::Debit,
+                $priceCents,
+                $wallet->balance_cents,
+                'boost',
+                $boost->id,
+            );
+
             $this->xp->award($user->id, XpService::BOOST);
 
             DB::commit();

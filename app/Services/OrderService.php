@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\LedgerDirection;
+use App\Enums\LedgerEntryType;
 use App\Enums\ListingStatus;
 use App\Enums\OrderStatus;
 use App\Models\Listing;
@@ -13,7 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
-    public function __construct(private readonly XpService $xp) {}
+    public function __construct(
+        private readonly XpService $xp,
+        private readonly LedgerService $ledger,
+    ) {}
 
     /**
      * Comprador adquire um anúncio: o valor é debitado da carteira do
@@ -64,6 +69,16 @@ class OrderService
             ]);
 
             $lockedListing->update(['status' => ListingStatus::Sold]);
+
+            $this->ledger->record(
+                $buyerWallet,
+                LedgerEntryType::EscrowDebit,
+                LedgerDirection::Debit,
+                $price,
+                $buyerWallet->balance_cents,
+                'order',
+                $order->id,
+            );
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -137,6 +152,15 @@ class OrderService
         $sellerWallet = Wallet::where('user_id', $order->seller_id)->lockForUpdate()->first()
             ?? Wallet::create(['user_id' => $order->seller_id]);
         $sellerWallet->increment('balance_cents', $order->seller_payout_cents);
+        $this->ledger->record(
+            $sellerWallet,
+            LedgerEntryType::EscrowReleaseCredit,
+            LedgerDirection::Credit,
+            $order->seller_payout_cents,
+            $sellerWallet->balance_cents,
+            'order',
+            $order->id,
+        );
         // A taxa (fee_cents) permanece retida pela plataforma — o MVP não
         // mantém uma conta de plataforma, então o valor simplesmente não é creditado.
 

@@ -45,15 +45,17 @@ class ListingTest extends TestCase
         Storage::fake('local');
         $user = User::factory()->create();
 
-        $this->actingAs($user, 'sanctum')
+        $response = $this->actingAs($user, 'sanctum')
             ->post('/api/listings', $this->validPayload(), ['Accept' => 'application/json'])
             ->assertCreated()
             ->assertJsonPath('data.title', '100kk Tibia Coins')
             ->assertJsonPath('data.status', 'active')
-            ->assertJsonPath('data.seller.id', $user->id)
-            ->assertJsonPath('data.photo_url', "/api/listings/1/photo");
+            ->assertJsonPath('data.seller.id', $user->id);
 
+        // photo_url casa com o id real do anúncio criado (não um id fixo —
+        // o auto-increment não reseta entre testes do mesmo processo).
         $listing = Listing::first();
+        $response->assertJsonPath('data.photo_url', "/api/listings/{$listing->id}/photo");
         $this->assertNotNull($listing->photo_path);
         Storage::disk('local')->assertExists($listing->photo_path);
     }
