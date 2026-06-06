@@ -124,12 +124,20 @@ const removeListing = () => {
   height: 100%;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--rar) 35%, transparent);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+/* Glow de raridade no hover (cor, sem movimento) — sempre ativo. */
 .listing-card:hover {
-  transform: translateY(-4px);
   box-shadow: 0 14px 32px -12px color-mix(in srgb, var(--rar) 55%, transparent),
               0 0 0 1px color-mix(in srgb, var(--rar) 55%, transparent);
+}
+/* Lift + transição só quando o usuário permite motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .listing-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .listing-card:hover {
+    transform: translateY(-4px);
+  }
 }
 .thumb {
   position: relative;

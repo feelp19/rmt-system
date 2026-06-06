@@ -39,13 +39,22 @@ onUnmounted(() => {
     <!-- Ticker rolando — PrimeVue não tem primitivo de ticker; CSS custom. -->
     <div class="ticker" aria-label="Vendas recentes">
       <ul class="track">
-        <li v-for="(sale, i) in sales" :key="i" class="item">
-          <i class="pi pi-bolt" :class="sale.type === 'gold' ? 'r-gold' : 'r-rare'" />
-          <span class="who">{{ sale.seller_name }}</span> vendeu
-          <span class="what">{{ sale.title }}</span>
-          <span class="game">({{ sale.game }})</span>
-          <span class="price">{{ formatCents(sale.amount_cents) }}</span>
-        </li>
+        <!-- Lista duplicada (pass 1 e 2): o keyframe rola até -50% = início da
+             cópia, criando loop sem salto. A 2ª passada é decorativa (aria-hidden). -->
+        <template v-for="pass in 2" :key="pass">
+          <li
+            v-for="(sale, i) in sales"
+            :key="`${pass}-${i}`"
+            class="item"
+            :aria-hidden="pass === 2 ? 'true' : undefined"
+          >
+            <i class="pi pi-bolt" :class="sale.type === 'gold' ? 'r-gold' : 'r-rare'" />
+            <span class="who">{{ sale.seller_name }}</span> vendeu
+            <span class="what">{{ sale.title }}</span>
+            <span class="game">({{ sale.game }})</span>
+            <span class="price">{{ formatCents(sale.amount_cents) }}</span>
+          </li>
+        </template>
       </ul>
     </div>
   </section>
