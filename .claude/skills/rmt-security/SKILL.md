@@ -116,6 +116,8 @@ rmt usa **single-origin** via Caddy: `/api/*` é roteado para o worker Laravel; 
 
 **Regra central**: todo upload é hostil até prova em contrário.
 
+> **Implementado**: `App\Services\ImageUploadService` faz as 4 camadas (FormRequest `image|mimes|max` → `finfo` magic bytes → reprocessa via **GD** pra WebP → disco **privado** `local` + nome `Str::random(40).webp`). Servido por endpoint **id-based** (`/api/listings/{id}/photo`, `/api/users/{id}/avatar`) com `X-Content-Type-Options: nosniff` — **nunca** via `/storage` (no single-origin do Caddy, `/storage` cai no Nuxt). `ext-gd` está no Dockerfile.
+
 **Camada 1 — FormRequest na borda:**
 - `mimes:` (Laravel checa MIME guess + extensão) + `max:N` — bloqueia ~95% do tráfego abusivo antes de tocar PHP/disco
 - Não suficiente sozinho — `mimes:` aceita `Content-Type` declarado pelo cliente

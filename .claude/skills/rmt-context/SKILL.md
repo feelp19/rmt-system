@@ -52,7 +52,11 @@ Autenticado (`auth:sanctum`):
 - `POST /api/wallet/pix` · `GET /api/wallet/pix/{id}` — carregar saldo via PIX (PushinPay): cria cobrança + polling do status (confirma on-demand)
 - `POST /api/webhooks/pushinpay/{token}` — webhook público da PushinPay (autenticidade pelo secret na URL + re-verificação no job; sem auth:sanctum)
 - `POST /api/listings` · `DELETE /api/listings/{id}` — criar / cancelar anúncio próprio
+- `POST /api/listings` (multipart, **foto obrigatória**) · `PUT /api/listings/{id}` (multipart, `_method=PUT`) — criar/editar anúncio próprio (`throttle:20,1`)
+- `GET /api/listings/{id}/photo` · `GET /api/users/{id}/avatar` (públicos) — stream de imagem (disco privado)
 - `POST /api/listings/{id}/boosts` — turbinar anúncio próprio (boost pago; Inc 1: carteira, `throttle:30,1`)
+- `GET /api/me/profile` · `GET /api/me/listings` · `POST /api/me/avatar` (multipart) — perfil + avatar
+- `GET /api/leaderboard` (público) — ranking por XP
 - `GET /api/orders` · `POST /api/orders` — listar / comprar (gera escrow)
 - `GET /api/orders/{id}`
 - `POST /api/orders/{id}/confirm-delivery` (vendedor) · `POST /api/orders/{id}/confirm-receipt` (comprador) — dupla confirmação; ambos → libera escrow

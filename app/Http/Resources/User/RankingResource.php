@@ -6,11 +6,8 @@ use App\Services\XpService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/**
- * Representação enxuta de um usuário para embutir em outros recursos
- * (vendedor/comprador). Nunca expõe e-mail ou demais PII.
- */
-class PublicUserResource extends JsonResource
+/** Entrada do leaderboard público (ranking por XP). */
+class RankingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
@@ -18,6 +15,7 @@ class PublicUserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'avatar_url' => $this->avatar_path ? '/api/users/'.$this->id.'/avatar' : null,
+            'xp' => (int) $this->xp,
             'level' => XpService::levelForXp((int) $this->xp),
         ];
     }

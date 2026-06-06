@@ -30,6 +30,7 @@ Ponto de entrada do vault. Use isto antes de mergulhar em pastas. Cada cluster l
 - [[2026-06-05 homepage]] — homepage combinada (hero + como funciona + stats + vitrine), gaming-bold
 - [[2026-06-05 boost-destaque-inc1]] — boost pago (3 pacotes) + área "Em destaque", pago por carteira (Inc 1; PIX no Inc 2)
 - [[2026-06-05 pix-topup-pushinpay-inc2]] — carga de saldo via PIX (PushinPay): cobrança + webhook seguro + jobs (Boost Inc 2)
+- [[2026-06-05 perfil-xp-imagens]] — foto obrigatória + editar/excluir anúncio, perfil+avatar, XP/níveis/perks/ranking
 
 ## Frontend
 

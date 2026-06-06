@@ -56,7 +56,8 @@ Listing ──< Boost (listing_id) ; Listing ─1 activeBoost (hasOne ativo)
 - **Fillable**: `name`, `email`, `password`
 - **Hidden**: `password`, `remember_token`
 - **Traits**: `HasApiTokens`, `HasFactory`, `Notifiable`
-- **Relações de domínio**: `wallet` (HasOne), `listings` (HasMany seller_id), `purchases` (HasMany buyer_id), `sales` (HasMany seller_id)
+- **Relações de domínio**: `wallet` (HasOne), `listings` (HasMany seller_id), `purchases` (HasMany buyer_id), `sales` (HasMany seller_id), `boosts` (HasMany)
+- **Campos novos**: `avatar_path` (nullable, disco privado, servido via `/api/users/{id}/avatar`), `xp` (unsignedBigInteger default 0, indexado p/ ranking). Nível/perk derivam de `xp` via `XpService` (não há coluna de nível). `avatar_path`/`name`/`email`/`password` fillable; **`xp` NÃO é fillable** (só `XpService::award` incrementa).
 
 ### Wallet
 
@@ -76,7 +77,7 @@ Listing ──< Boost (listing_id) ; Listing ─1 activeBoost (hasOne ativo)
 - **Enums**: `type → ListingType` (coluna `type`), `status → ListingStatus` (coluna `status`)
 - **Casts**: `type → ListingType`, `status → ListingStatus`, `quantity → integer`, `price_cents → integer`
 - **Fillable**: `seller_id`, `game`, `type`, `title`, `description`, `quantity`, `price_cents`, `status`
-- `game` é texto livre (qualquer jogo). `price_cents` = preço total do anúncio. Índices: `(status, game)`, `seller_id`.
+- `game` é texto livre (qualquer jogo). `price_cents` = preço total do anúncio. `photo_path` (nullable, disco privado, servido via `/api/listings/{id}/photo`) — **obrigatório na criação** (antigos = null → placeholder). Índices: `(status, game)`, `seller_id`.
 
 ### Order (transação / escrow)
 

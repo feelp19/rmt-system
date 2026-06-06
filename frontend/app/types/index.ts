@@ -12,12 +12,33 @@ export interface ListingBoost {
 export interface PublicUser {
   id: number
   name: string
+  avatar_url: string | null
+  level: number
 }
 
 export interface AuthUser {
   id: number
   name: string
   email: string
+  avatar_url: string | null
+  xp: number
+  level: number
+  level_floor: number
+  next_level_xp: number | null
+}
+
+export interface ProfileStats {
+  active_listings: number
+  sales: number
+  purchases: number
+}
+
+export interface RankingEntry {
+  id: number
+  name: string
+  avatar_url: string | null
+  xp: number
+  level: number
 }
 
 export interface Wallet {
@@ -48,6 +69,7 @@ export interface Listing {
   quantity: number
   price_cents: number
   status: ListingStatus
+  photo_url: string | null
   seller: PublicUser | null
   boost?: ListingBoost | null
   created_at: string

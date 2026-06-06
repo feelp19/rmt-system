@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
+    public function __construct(private readonly XpService $xp) {}
+
     /**
      * Comprador adquire um anúncio: o valor é debitado da carteira do
      * comprador e fica retido (escrow) na Order até a dupla confirmação.
@@ -43,7 +45,10 @@ class OrderService
                 throw new DomainException('Saldo insuficiente.');
             }
 
-            $feeCents = $this->feeFor($price);
+            // Taxa depende do nível do vendedor (perk de XP) — lock pra não ler
+            // xp stale enquanto outra venda do mesmo vendedor concede XP.
+            $seller = User::whereKey($lockedListing->seller_id)->lockForUpdate()->firstOrFail();
+            $feeCents = $this->feeFor($price, $seller);
             $payoutCents = $price - $feeCents;
 
             $buyerWallet->decrement('balance_cents', $price);
@@ -138,13 +143,22 @@ class OrderService
         $order->status = OrderStatus::Completed;
         $order->completed_at = now();
         $order->save();
+
+        // XP por transação concluída (reputação/perks/ranking).
+        $this->xp->award($order->seller_id, XpService::SELL);
+        $this->xp->award($order->buyer_id, XpService::BUY);
     }
 
-    /** Taxa da plataforma em centavos inteiros (arredonda para baixo). */
-    private function feeFor(int $amountCents): int
+    /**
+     * Taxa da plataforma em centavos inteiros. Em basis points, com desconto
+     * pelo nível do vendedor (perk): base 5%, piso 3%. Arredonda para baixo.
+     */
+    private function feeFor(int $amountCents, User $seller): int
     {
-        $feePercent = (int) config('marketplace.fee_percent', 5);
+        $baseBps = ((int) config('marketplace.fee_percent', 5)) * 100;
+        $level = XpService::levelForXp((int) $seller->xp);
+        $feeBps = XpService::feeBpsForLevel($level, $baseBps);
 
-        return intdiv($amountCents * $feePercent, 100);
+        return intdiv($amountCents * $feeBps, 10000);
     }
 }

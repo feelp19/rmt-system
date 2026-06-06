@@ -22,6 +22,8 @@ Ao retomar um item, mover para a seção `Resolvido` com a data.
 | DT-04 | Fetch do frontend é client-side (`useAsyncData server:false`) — sem SSR dos dados | Evitar atrito SSR/hostname Docker em dev | Quando o SSR dos dados virar requisito (SEO/perf) |
 | DT-05 | Token Bearer no cookie `rmt_token` **não** é `httpOnly` (lido por JS p/ montar o header `Authorization`) → roubável via XSS | httpOnly quebraria a leitura client-side do token nesta arquitetura Bearer | Migrar p/ Sanctum SPA cookie de sessão httpOnly (single-origin via Caddy já está pronto) ou token só em memória (`useState`) + refresh |
 | DT-06 | Jobs agendados (`ReconcilePendingPixChargesJob`, `ExpireBoostsJob`) não rodam — falta um runner de scheduler (`schedule:work`/cron); só o `horizon` (worker) está no compose | MVP: o `PixChargeController::show` re-consulta on-demand e cobre o fluxo local | Antes de prod: adicionar processo `php artisan schedule:work` (container ou supervisord no horizon) |
+| DT-07 | Foto/avatar com cache 300s e URL sem versão (`/api/.../photo`) → trocar a imagem reflete em outros lugares em até 5min | Versionar a URL (`?v=hash(path)`) quebraria asserts de teste; cache curto resolve no MVP | Versionar a URL pela random-name do arquivo quando virar problema |
+| DT-08 | XP/perk sem anti-fraude de wash-trading: duas contas comprando/vendendo entre si farmam XP e desconto de taxa | Comprar do próprio anúncio já é bloqueado; conluio entre contas distintas não | Limitar XP por contraparte/tempo, ou exigir reputação verificada antes do perk de taxa |
 
 ## Resolvido
 

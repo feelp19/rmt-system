@@ -13,6 +13,12 @@ class ListingPolicy
         return true;
     }
 
+    /** Apenas o dono do anúncio pode editá-lo. */
+    public function update(User $user, Listing $listing): bool
+    {
+        return $listing->seller_id === $user->id;
+    }
+
     /** Apenas o dono do anúncio pode cancelá-lo. */
     public function delete(User $user, Listing $listing): bool
     {

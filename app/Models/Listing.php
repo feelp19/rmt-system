@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['seller_id', 'game', 'type', 'title', 'description', 'quantity', 'price_cents', 'status'])]
+#[Fillable(['seller_id', 'game', 'type', 'title', 'description', 'quantity', 'price_cents', 'status', 'photo_path'])]
 class Listing extends Model
 {
     /** @use HasFactory<\Database\Factories\ListingFactory> */

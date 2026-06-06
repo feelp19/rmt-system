@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Marketplace\BoostController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\Marketplace\OrderController;
+use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Wallet\PixChargeController;
 use App\Http\Controllers\Wallet\WalletController;
 use App\Http\Controllers\Webhooks\PushinPayWebhookController;
@@ -22,11 +23,19 @@ Route::post('/webhooks/pushinpay/{token}', [PushinPayWebhookController::class, '
 Route::get('/listings', [ListingController::class, 'index']);
 Route::get('/listings/featured', [ListingController::class, 'featured']); // faixa "Em destaque" (boostados)
 Route::get('/listings/{listing}', [ListingController::class, 'show'])->whereNumber('listing');
+Route::get('/listings/{listing}/photo', [ListingController::class, 'photo'])->whereNumber('listing'); // stream da foto
+Route::get('/users/{user}/avatar', [ProfileController::class, 'avatar'])->whereNumber('user'); // stream do avatar
+Route::get('/leaderboard', [ProfileController::class, 'leaderboard']); // ranking por XP
 
 // ─── Área autenticada ─────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Perfil
+    Route::get('/me/profile', [ProfileController::class, 'show']);
+    Route::get('/me/listings', [ProfileController::class, 'listings']);
+    Route::post('/me/avatar', [ProfileController::class, 'uploadAvatar'])->middleware('throttle:20,1');
 
     Route::get('/wallet', [WalletController::class, 'show']);
     Route::post('/wallet/deposit', [WalletController::class, 'deposit'])->middleware('throttle:30,1');
@@ -35,8 +44,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Polling do status (3s no front) — rate limit pra não floodar o servidor.
     Route::get('/wallet/pix/{pixCharge}', [PixChargeController::class, 'show'])->whereNumber('pixCharge')->middleware('throttle:60,1');
 
-    Route::post('/listings', [ListingController::class, 'store']);
-    Route::delete('/listings/{listing}', [ListingController::class, 'destroy'])->whereNumber('listing');
+    // Upload de imagem é mais pesado → rate-limited.
+    Route::post('/listings', [ListingController::class, 'store'])->middleware('throttle:20,1');
+    Route::put('/listings/{listing}', [ListingController::class, 'update'])->whereNumber('listing')->middleware('throttle:20,1');
+    Route::delete('/listings/{listing}', [ListingController::class, 'destroy'])->whereNumber('listing')->middleware('throttle:20,1');
     // Turbinar anúncio próprio (boost pago — Inc 1: carteira).
     Route::post('/listings/{listing}/boosts', [BoostController::class, 'store'])->whereNumber('listing')->middleware('throttle:30,1');
 

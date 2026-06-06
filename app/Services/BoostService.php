@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class BoostService
 {
+    public function __construct(private readonly XpService $xp) {}
+
     /**
      * Compra um boost pagando com o saldo da carteira do anunciante.
      *
@@ -44,6 +46,7 @@ class BoostService
             $wallet->decrement('balance_cents', $priceCents);
 
             $boost = $this->createActiveBoost($listing, $user, $tier, BoostPaymentMethod::Wallet);
+            $this->xp->award($user->id, XpService::BOOST);
 
             DB::commit();
         } catch (\Throwable $e) {

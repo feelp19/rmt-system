@@ -19,6 +19,8 @@ class ListingResource extends JsonResource
             'quantity' => $this->quantity,
             'price_cents' => $this->price_cents,
             'status' => $this->status->value,
+            // URL relativa (mesma origem) — endpoint público que faz stream do arquivo.
+            'photo_url' => $this->photo_path ? '/api/listings/'.$this->id.'/photo' : null,
             'seller' => PublicUserResource::make($this->whenLoaded('seller')),
             // Boost ativo (badge/destaque) — null quando não está turbinado.
             'boost' => $this->whenLoaded('activeBoost', fn () => $this->activeBoost ? [

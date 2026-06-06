@@ -67,15 +67,14 @@ const browse = () => {
 </template>
 
 <style scoped>
-/* Hero full-bleed gaming: tinta verde-escura + brilho radial + grão. Type display
-   em escala grande. PrimeVue não tem primitivo de hero (regra 12); o accent usa o
-   token --p-primary-color do tema. */
+/* Hero gaming: painel contido arredondado (sem full-bleed, pra não cortar),
+   tinta verde-escura + brilho radial + grão. Type display em escala grande.
+   PrimeVue não tem primitivo de hero (regra 12); accent via --p-primary-color. */
 .hero {
   position: relative;
-  width: 100vw;
-  margin-inline: calc(50% - 50vw);
+  border-radius: 1.5rem;
   margin-bottom: 3.5rem;
-  padding: clamp(3rem, 7vw, 6rem) 1.5rem clamp(3.5rem, 8vw, 7rem);
+  padding: clamp(2.5rem, 5vw, 4.5rem) clamp(1.5rem, 4vw, 3.5rem);
   overflow: hidden;
   color: #eaf2ee;
   background:
