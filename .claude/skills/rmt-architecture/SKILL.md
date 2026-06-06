@@ -87,6 +87,8 @@ Idempotência: o append ocorre no caminho one-shot sob guard de status/lock — 
 
 Ambas com `throttle:60,1`. Rota de verify com `whereAlphaNumeric('hash')`.
 
+**Autorização — `LedgerPolicy`** (`app/Policies/LedgerPolicy.php`): `viewAny` (qualquer auth — o extrato escopa por `user_id`) e `view(User, LedgerEntry)` (dono da wallet **ou** contraparte da order referenciada). Registrada **explicitamente** via `Gate::policy(LedgerEntry::class, LedgerPolicy::class)` no `AppServiceProvider::boot()` — auto-discovery espera `LedgerEntryPolicy`, não casa com o nome `LedgerPolicy`. O verify chama a policy via `$request->user()->cannot('view', $entry)` + `abort(404)` (preserva 404 anti-enumeração da regra 4 — `authorize()` devolveria 403). O extrato usa `$this->authorize('viewAny', LedgerEntry::class)`.
+
 **Ordenação por boost sem `DB::raw`** (regra 5): `ListingController::index`/`featured` usam `addSelect(['grid_boost_weight' => Boost::select('weight')->whereColumn('listing_id','listings.id')->active()->...->limit(1)])` + `->orderByDesc($alias)`. Eager load `activeBoost` (HasOne `->active()->latestOfMany()`) p/ o badge. `whereHas('boosts', fn($q)=>$q->active())` filtra o destaque.
 
 ## Pagamentos PIX (PushinPay) — integração externa
