@@ -54,4 +54,15 @@ class VerifyLedgerCommandTest extends TestCase
         $this->artisan('ledger:verify')
             ->assertExitCode(1);
     }
+
+    public function test_wallet_with_no_entries_is_not_flagged(): void
+    {
+        // Carteira recém-criada, zero transações: ledger_seq=0, ledger_head_hash=null.
+        $user = User::factory()->create();
+        Wallet::factory()->for($user)->create();
+
+        $this->artisan('ledger:verify')
+            ->expectsOutputToContain('OK')
+            ->assertExitCode(0);
+    }
 }
