@@ -79,7 +79,7 @@ subordinados a `prefers-reduced-motion: reduce`.
 | `frontend/nuxt.config.ts` | `definePreset` ouro, `darkModeSelector`, `htmlAttrs`, `htmlAttrs.class` |
 | `frontend/app/assets/css/main.css` | tokens `--gold/--rare/--epic/--legend`, `overflow-x:clip`, fix `.num` |
 | `frontend/app/utils/rarity.ts` | utilitário de raridade derivada (boost tier + tipo) |
-| `frontend/app/plugins/reveal.client.ts` | plugin client-only de reveal on scroll |
+| `frontend/app/plugins/reveal.ts` | plugin **universal** da diretiva `v-reveal` (reveal on scroll) |
 | `frontend/app/components/HomeActivity.vue` | componente novo — feed ao vivo |
 | `frontend/app/components/HomeHero.vue` | spotlight, aurora, sheen, efeitos máximo |
 | `frontend/app/components/HomeHowItWorks.vue` | fix contraste `.num`, rebranding ouro |
@@ -108,6 +108,14 @@ subordinados a `prefers-reduced-motion: reduce`.
 - **`contrastColor` no preset Aura não é automático para cores personalizadas**: ao usar
   uma paleta completamente fora do padrão PrimeVue (ouro ≠ paleta muted), o cálculo
   automático de contraste pode errar. Declarar `contrastColor` explicitamente no `definePreset`.
+- **Diretiva custom em plugin `.client` quebra o SSR (500)**: `v-reveal` foi registrada em
+  `plugins/reveal.client.ts`. A home é SSR; no server a diretiva não existe →
+  `resolveDirective` retorna `undefined` → `ssrGetDirectiveProps` lança
+  *"Cannot read properties of undefined (reading 'getSSRProps')"* → **500 na home inteira**.
+  **`npm run build` passou** — só explodiu no SSR runtime do container. Fix: plugin **universal**
+  (`reveal.ts`, sem `.client`) + `getSSRProps() { return {} }`; `mounted`/`unmounted` continuam
+  client-only. **Lição**: validar diretivas/efeitos com a app rodando (`curl localhost` no
+  container), nunca confiar só no build. Pegou no usuário, não no finisher.
 
 ## Dívida técnica gerada
 
