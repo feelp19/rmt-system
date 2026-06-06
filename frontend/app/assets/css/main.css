@@ -1,0 +1,27 @@
+/* Tokens da marca (homepage) + tipografia display. */
+:root {
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  /* Tinta quase-preta puxada pro verde (nunca #000). */
+  --ink: #0a100d;
+  --ink-soft: #121b16;
+  --gold: #f3b340;
+}
+
+/* Display font nos títulos — dá personalidade sem custar legibilidade no corpo. */
+h1,
+h2,
+h3,
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

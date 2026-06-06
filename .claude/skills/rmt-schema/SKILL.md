@@ -15,16 +15,23 @@ user-invocable: false
 
 ## Mapa de domínio
 
-**Sem hierarquia de domínio ainda.** Só existe `User` como model de negócio. Todas as outras tabelas são de infraestrutura (framework, auth, filas, observabilidade).
+Domínio **marketplace de itens/gold de jogos** (MVP). Usuário anuncia (`Listing`),
+outro compra gerando `Order` com **escrow de dupla confirmação**: o valor sai da
+`Wallet` do comprador e fica retido na Order até vendedor (entregou) **e** comprador
+(recebeu) confirmarem; aí o vendedor recebe `amount - taxa(5%)`. Carteira é simulada
+(sem gateway), valores sempre em **centavos inteiros**.
 
 Atualizar este skill ao adicionar models/migrations: registrar PK, relações, enums e casts de cada novo model aqui.
 
 ## Hierarquia
 
-Nenhuma hierarquia de domínio definida. Estrutura atual:
-
 ```
-User  (único model de domínio)
+User ──< Listing (seller_id)
+User ──< Order   (buyer_id / seller_id)
+User ──1 Wallet  (user_id, único)
+User ──< Boost   (user_id = anunciante)
+Listing ──< Order (listing_id)
+Listing ──< Boost (listing_id) ; Listing ─1 activeBoost (hasOne ativo)
 ```
 
 ## Modelos
@@ -49,6 +56,58 @@ User  (único model de domínio)
 - **Fillable**: `name`, `email`, `password`
 - **Hidden**: `password`, `remember_token`
 - **Traits**: `HasApiTokens`, `HasFactory`, `Notifiable`
+- **Relações de domínio**: `wallet` (HasOne), `listings` (HasMany seller_id), `purchases` (HasMany buyer_id), `sales` (HasMany seller_id), `boosts` (HasMany)
+- **Campos novos**: `avatar_path` (nullable, disco privado, servido via `/api/users/{id}/avatar`), `xp` (unsignedBigInteger default 0, indexado p/ ranking). Nível/perk derivam de `xp` via `XpService` (não há coluna de nível). `avatar_path`/`name`/`email`/`password` fillable; **`xp` NÃO é fillable** (só `XpService::award` incrementa).
+
+### Wallet
+
+- **Tabela**: `wallets`
+- **PK**: `id` (BigInt auto-inc)
+- **Relações**: `user` (BelongsTo, `user_id` único)
+- **Enums**: nenhum
+- **Casts**: `balance_cents → integer`
+- **Fillable**: `user_id`, `balance_cents`
+- Saldo disponível em **centavos inteiros** (`bigInteger`, default 0). Uma carteira por usuário (índice unique em `user_id`). Criada no registro (`WalletService::walletFor`).
+
+### Listing (anúncio)
+
+- **Tabela**: `listings`
+- **PK**: `id` (BigInt auto-inc)
+- **Relações**: `seller` (BelongsTo User, `seller_id`), `orders` (HasMany)
+- **Enums**: `type → ListingType` (coluna `type`), `status → ListingStatus` (coluna `status`)
+- **Casts**: `type → ListingType`, `status → ListingStatus`, `quantity → integer`, `price_cents → integer`
+- **Fillable**: `seller_id`, `game`, `type`, `title`, `description`, `quantity`, `price_cents`, `status`
+- `game` é texto livre (qualquer jogo). `price_cents` = preço total do anúncio. `photo_path` (nullable, disco privado, servido via `/api/listings/{id}/photo`) — **obrigatório na criação** (antigos = null → placeholder). Índices: `(status, game)`, `seller_id`.
+
+### Order (transação / escrow)
+
+- **Tabela**: `orders`
+- **PK**: `id` (BigInt auto-inc)
+- **Relações**: `listing` (BelongsTo), `buyer` (BelongsTo User `buyer_id`), `seller` (BelongsTo User `seller_id`)
+- **Enums**: `status → OrderStatus`
+- **Casts**: `status → OrderStatus`, `amount_cents`/`fee_cents`/`seller_payout_cents → integer`, `seller_confirmed_at`/`buyer_confirmed_at`/`completed_at → datetime`
+- **Fillable**: `listing_id`, `buyer_id`, `seller_id`, `amount_cents`, `fee_cents`, `seller_payout_cents`, `status`, `seller_confirmed_at`, `buyer_confirmed_at`, `completed_at`
+- `seller_id` é denormalizado do listing (escopo de query/IDOR). Valores travados no momento da compra. Dupla confirmação = ambos `*_confirmed_at` preenchidos → `release` credita o vendedor. Índices: `buyer_id`, `seller_id`, `status`.
+
+### Boost (destaque pago)
+
+- **Tabela**: `boosts`
+- **PK**: `id` (BigInt auto-inc)
+- **Relações**: `listing` (BelongsTo), `user` (BelongsTo = anunciante). Em `Listing`: `boosts` (HasMany) + `activeBoost` (HasOne `->active()->latestOfMany()`).
+- **Enums**: `tier → BoostTier`, `status → BoostStatus`, `payment_method → BoostPaymentMethod`
+- **Casts**: enums acima, `weight`/`price_cents → integer`, `starts_at`/`expires_at`/`paid_at → datetime`
+- **Fillable**: `listing_id`, `user_id`, `tier`, `weight`, `price_cents`, `payment_method`, `status`, `starts_at`, `expires_at`, `paid_at`
+- `weight` é denormalizado do tier (`BoostTier::weight()`) p/ ordenação por subquery sem `DB::raw`. Scope `active()` = status `active` E `expires_at > now`. Dura `config('marketplace.boost_days', 7)` dias. Índices: `(status, expires_at)`, `listing_id`.
+
+### PixCharge (carga de saldo via PushinPay)
+
+- **Tabela**: `pix_charges`
+- **PK**: `id` (BigInt auto-inc)
+- **Relações**: `user` (BelongsTo = quem está carregando)
+- **Enums**: `status → PixChargeStatus`
+- **Casts**: `status → PixChargeStatus`, `amount_cents → integer`, `paid_at`/`expires_at → datetime`
+- **Fillable**: `user_id`, `pushinpay_id`, `amount_cents`, `status`, `qr_code`, `qr_code_base64`, `end_to_end_id`, `paid_at`, `expires_at`
+- `pushinpay_id` **unique** (idempotência; normalizado lowercase — a PushinPay devolve UPPERCASE na consulta). `qr_code` = copia-e-cola; `qr_code_base64` = `data:image/png;base64,...`. `expires_at` = `now()+30min`. Crédito na carteira só em `confirmPaid` (uma vez). Índices: `(user_id, status)`, `status`.
 
 ---
 
@@ -79,7 +138,17 @@ User  (único model de domínio)
 
 ## Enums
 
-Nenhum enum de domínio definido ainda. Ao criar o primeiro enum, adicionar em `app/Enums/` e registrar aqui com: nome da classe, string-backed ou int-backed, valores possíveis, e qual coluna/model usa.
+Todos string-backed em `app/Enums/`. Coluna no SQL é `string` (nunca `ENUM`), model declara cast.
+
+| Enum | Coluna / Model | Valores |
+|---|---|---|
+| `ListingType` | `listings.type` | `item`, `gold` |
+| `ListingStatus` | `listings.status` | `active`, `sold`, `cancelled` |
+| `OrderStatus` | `orders.status` | `awaiting_confirmation`, `completed`, `cancelled` |
+| `BoostTier` | `boosts.tier` | `basic` (R$5), `intermediate` (R$15), `advanced` (R$25) — c/ métodos `priceCents()`, `weight()`, `floatsInGrid()` |
+| `BoostStatus` | `boosts.status` | `pending_payment`, `active`, `expired`, `cancelled` |
+| `BoostPaymentMethod` | `boosts.payment_method` | `wallet`, `pix` |
+| `PixChargeStatus` | `pix_charges.status` | `created`, `paid`, `expired`, `canceled` |
 
 ## Convenções de PK (direção para o domínio)
 

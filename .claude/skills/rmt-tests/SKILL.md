@@ -18,6 +18,15 @@ user-invocable: false
 - Trait padrão: `Illuminate\Foundation\Testing\RefreshDatabase`
 - Suítes: `tests/Feature/` (HTTP/integração) e `tests/Unit/` (regra isolada)
 - Referência real: `tests/Feature/HealthTest.php` — exemplo canônico de teste de API JSON no projeto
+- Marketplace: `tests/Feature/Marketplace/EscrowFlowTest.php` (fluxo de escrow ponta-a-ponta: compra debita, dupla confirmação libera com taxa 5%, IDOR 404, papel errado 403, idempotência), `ListingTest.php`, `BoostTest.php` (boost via carteira, saldo insuficiente 422, IDOR 404, já-turbinado 422, featured ordenado por tier, grid floata intermediário/avançado), `tests/Feature/Auth/AuthTest.php`, e Unit `BoostTierTest.php` (preços/peso). Factories: `WalletFactory` (`->withBalance(cents)`), `ListingFactory`, `OrderFactory`, `BoostFactory` (`->tier()`, `->expired()`).
+
+> **Rodar fora do Docker (host)**: o host não tem `pdo_sqlite` carregado por padrão e o `.env` aponta para MySQL (`mysql` não resolve no host). Para rodar local rápido:
+> `DB_CONNECTION=sqlite DB_DATABASE=:memory: php -d extension=pdo_sqlite vendor/bin/phpunit`
+> (use `vendor/bin/phpunit` direto — `php artisan test` re-spawna sem o `-d`). O caminho canônico continua sendo dentro do container (`docker compose exec -T app php artisan test`).
+> **Nunca** rode `composer dump-autoload` dentro do container `app` com os workers Octane vivos — corrompe o autoloader em memória (erros tipo `Target class [config] does not exist`); use `octane:reload`/restart depois.
+
+- Uploads/perfil/XP: `tests/Feature/Marketplace/ListingTest.php` (foto obrigatória, rejeita não-imagem, edita, stream da foto), `tests/Feature/Profile/ProfileTest.php` (avatar upload+serve, stats, leaderboard), `tests/Feature/Marketplace/XpTest.php` (XP em venda/compra/boost/1º-anúncio, taxa menor p/ vendedor de nível alto), `tests/Unit/XpServiceTest.php`. Imagens: `Storage::fake('local')` + `UploadedFile::fake()->image('p.jpg', w, h)` (host precisa de **GD**, que está carregado). `BoostFactory`/`PixChargeFactory` já existem. Factory **seta `xp`** mesmo sem ser fillable (factories ignoram o guard).
+- Pagamentos PIX: `tests/Feature/Wallet/PixTopUpTest.php` — usa `Http::fake(['*/api/pix/cashIn' => ..., '*/api/transactions/*' => ...])` p/ o gateway PushinPay e `Queue::fake()` p/ asserir `ProcessPushinPayWebhookJob`. Cobre: gera QR, gateway falho → 503, escopo dono → 404, polling confirma+credita, `confirmPaid` idempotente (credita 1×), webhook token inválido → 404, webhook válido despacha job. Factory `PixChargeFactory` (`->paid()`). **Nunca** chamar a API real da PushinPay em teste — sempre `Http::fake`.
 
 ## Convenção de classe e nomenclatura
 

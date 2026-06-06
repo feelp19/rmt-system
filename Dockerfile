@@ -2,7 +2,7 @@
 FROM dunglas/frankenphp:php8.5 AS base
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-RUN install-php-extensions pdo_mysql redis intl zip bcmath pcntl posix opcache
+RUN install-php-extensions pdo_mysql redis intl zip bcmath pcntl posix opcache gd
 
 WORKDIR /app
 

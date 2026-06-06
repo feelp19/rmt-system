@@ -12,6 +12,28 @@ user-invocable: false
 
 ---
 
+## Marketplace — o que já existe
+
+**Composables** (`app/composables/`): `useApi()` (get/post/del com `Authorization: Bearer` lido do cookie `rmt_token`), `useAuth()` (token em cookie + `user` em `useState`, `login`/`register`/`logout`/`fetchMe`, `isAuthenticated`), `useWallet()` (saldo em `useState` + `refresh`/`deposit`). O scaffold `useAPI()` (useFetch) segue existindo para GET SSR simples.
+
+**Utils** (`app/utils/`): `formatCents` (centavos → R$) e `reaisToCents`. Dinheiro trafega em **centavos inteiros**; a UI usa `InputNumber mode="currency"` em reais e converte na borda.
+
+**Auth**: token Bearer em cookie `rmt_token`. Plugin `auth.client.ts` hidrata o usuário no browser. Rotas privadas usam `definePageMeta({ middleware: 'auth' })` (`middleware/auth.ts` checa o cookie).
+
+**Perfil / XP / imagens**: página `/perfil` (`ProfileSummary` = `AvatarUploader` + nível + barra `ProgressBar` + stats; grid de "meus anúncios" com editar/excluir) e `/ranking` (leaderboard). `LevelBadge` (badge "Nv X" ouro) aparece no header, nos cards (vendedor) e no perfil. **Upload de imagem**: `FileUpload mode="basic" :auto="false" custom-upload @select` pega o `File`; envia via **`FormData`** com `useApi().post` (NÃO setar Content-Type). Edição de anúncio multipart usa `_method=PUT` no FormData (spoofing). Foto/avatar exibidos por `<img>`/`<Avatar :image>` apontando pro endpoint id-based; placeholder quando `null`. Excluir usa `useConfirm()` (`<ConfirmDialog>` no layout).
+
+**Carga de saldo (PIX/PushinPay)**: `DepositDialog` tem 2 caminhos — "Gerar PIX" (`POST /wallet/pix` → mostra QR via `<Image :src="qr_code_base64">` + copia-e-cola com `navigator.clipboard` guardado por `import.meta.client`, e faz **polling** `GET /wallet/pix/{id}` a cada 3s até `status=paid` → `refreshWallet`; limpa o `setInterval` em `watch(visible)` e `onUnmounted`) e "Crédito demo (instantâneo)" (`POST /wallet/deposit`, p/ testar sem pagar no sandbox).
+
+**Components** (`app/components/`): `AppHeader`, `AuthCard` (Tabs login/registro), `ListingCard` (comprar; hover glow; badge "Turbinado" + botão "Turbinar" no anúncio próprio), `ListingFormDialog`, `WalletPanel` + `DepositDialog`, `OrderCard` (dupla confirmação por papel), `ListingGrid` (vitrine + dialog de criar), `FeaturedListings` (faixa "Em destaque" = boostados), `BoostDialog` (escolhe tier via `SelectButton` + paga c/ carteira; `refreshNuxtData(['listings','featured'])` no sucesso), e a homepage `HomeHero` / `HomeHowItWorks` / `HomeStats`. **Pages** (`app/pages/`): `index` (homepage combinada = Hero + ComoFunciona + Stats + ListingGrid), `login`, `wallet`, `orders` — finas, só montam componentes.
+
+**Homepage (`/`)**: vibe "gaming-bold", paleta comprometida **verde-ink + verde elétrico (`--p-primary-color`) + ouro (`--gold`)** (tema gold-trading). Tipografia display **Bricolage Grotesque** (Google Fonts via `app.head` no `nuxt.config`; aplicada a `h1/h2/h3` em `app/assets/css/main.css` que também define `--ink`/`--gold`). `HomeHero` = full-bleed (`width:100vw; margin-inline:calc(50% - 50vw)`; layout tem `overflow-x:clip`), assimétrico, type em `clamp()`, **showcase de cards de produto** flutuando, reveal escalonado com `cubic-bezier(0.16,1,0.3,1)` sob `@media (prefers-reduced-motion: no-preference)`. `HomeHowItWorks` = fluxo numerado (numerais com `-webkit-text-stroke`, trilho conector) — **não** são cards idênticos. `HomeStats` = banda escura de confiança + chips de jogos — **não** é template de hero-metric. `HomeStats` lê o cache da vitrine via `useNuxtData('listings')`. Botão "Anunciar" do `HomeHero`/`ListingGrid` compartilham `useState('show_listing_form')`. "Ver vitrine" = `scrollIntoView('#vitrine')` (`import.meta.client`).
+
+> **Bans de design (skill `impeccable`)** respeitados na home: nada de **gradient text** (`background-clip:text`), nada de hero-metric template, nada de grade de cards idênticos. Realce = cor sólida + sublinhado `box-shadow inset`, nunca gradiente no texto.
+
+**Padrão de fetch**: o grid usa `useAsyncData('listings', () => api.get(...), { server: false })` (client-side, sem top-level await em componente). Componentes que só precisam do mesmo dado leem `useNuxtData('listings')`. Erros do backend → `useToast()` (nunca `alert`). `<Toast />` fica no `layouts/default.vue`.
+
+---
+
 ## Stack & layout
 
 | Item | Detalhe |

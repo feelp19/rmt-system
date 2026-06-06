@@ -23,4 +23,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // Regras de negócio violadas (saldo insuficiente, anúncio indisponível,
+        // etc.) viram 422 com mensagem limpa — sem stack trace para o cliente.
+        $exceptions->render(function (\DomainException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+        });
+
+        // Falha de integração externa (PushinPay) → 503, mensagem genérica.
+        $exceptions->render(function (\App\Exceptions\PushinPayException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => $e->getMessage()], 503);
+            }
+        });
     })->create();
