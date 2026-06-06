@@ -30,4 +30,28 @@ class WalletLedgerTest extends TestCase
         $this->assertSame(1, $entry->seq);
         $this->assertTrue(app(LedgerService::class)->signatureValid($entry));
     }
+
+    public function test_wallet_ledger_lists_only_own_entries_paginated(): void
+    {
+        $me = User::factory()->create();
+        Wallet::factory()->for($me)->create();
+        $other = User::factory()->create();
+        Wallet::factory()->for($other)->create();
+
+        app(WalletService::class)->deposit($me, 5_000);
+        app(WalletService::class)->deposit($me, 3_000);
+        app(WalletService::class)->deposit($other, 9_000);
+
+        $this->actingAs($me, 'sanctum')
+            ->getJson('/api/wallet/ledger')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.type', 'deposit_credit')
+            ->assertJsonPath('data.0.code', fn ($code) => is_string($code) && strlen($code) === 64);
+    }
+
+    public function test_wallet_ledger_requires_auth(): void
+    {
+        $this->getJson('/api/wallet/ledger')->assertUnauthorized();
+    }
 }
