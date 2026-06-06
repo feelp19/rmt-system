@@ -84,9 +84,9 @@ const steps = [
   font-weight: 800;
   line-height: 1;
   color: transparent;
-  -webkit-text-stroke: 1.5px var(--p-primary-color);
-  /* Fundo da página por trás do número, pra "cortar" o trilho. */
-  background: var(--p-content-background, #fff);
+  -webkit-text-stroke: 1.5px var(--gold);
+  /* Fundo da página (obsidiana) por trás do número, pra "cortar" o trilho. */
+  background: var(--bg);
 }
 .step h3 {
   margin: 0 0 0.4rem;
