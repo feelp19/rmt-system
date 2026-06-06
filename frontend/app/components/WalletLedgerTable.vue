@@ -10,6 +10,7 @@ type Entry = {
 }
 
 const api = useApi()
+const toast = useToast()
 const entries = ref<Entry[]>([])
 const loading = ref(true)
 
@@ -25,6 +26,8 @@ onMounted(async () => {
   try {
     const res = await api.get<{ data: Entry[] }>('/wallet/ledger')
     entries.value = res.data
+  } catch {
+    toast.add({ severity: 'error', summary: 'Erro', detail: 'Não foi possível carregar o extrato.', life: 4000 })
   } finally {
     loading.value = false
   }
