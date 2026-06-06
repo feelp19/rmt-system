@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Marketplace\BoostController;
+use App\Http\Controllers\Marketplace\LedgerVerificationController;
 use App\Http\Controllers\Marketplace\ListingController;
 use App\Http\Controllers\Marketplace\OrderController;
 use App\Http\Controllers\Profile\ProfileController;
@@ -52,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/listings/{listing}', [ListingController::class, 'destroy'])->whereNumber('listing')->middleware('throttle:20,1');
     // Turbinar anúncio próprio (boost pago — Inc 1: carteira).
     Route::post('/listings/{listing}/boosts', [BoostController::class, 'store'])->whereNumber('listing')->middleware('throttle:30,1');
+
+    Route::get('/ledger/{hash}/verify', [LedgerVerificationController::class, 'show'])
+        ->whereAlphaNumeric('hash')->middleware('throttle:60,1');
 
     Route::get('/orders', [OrderController::class, 'index']);
     // Mutações financeiras: rate-limited (defesa contra abuso/flood).
