@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Marketplace;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Marketplace\LedgerVerificationResource;
 use App\Models\LedgerEntry;
-use App\Models\Order;
 use App\Services\LedgerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,31 +21,14 @@ class LedgerVerificationController extends Controller
     {
         $entry = LedgerEntry::where('hash', $hash)->first();
 
-        if ($entry === null || ! $this->canView($request->user()->id, $entry)) {
-            abort(404);
-        }
+        // 404 (não 403) para linha inexistente OU fora do escopo — anti-enumeração
+        // (regra 4). A visibilidade vive na LedgerPolicy; chamamos via cannot() para
+        // preservar o 404 (authorize() devolveria 403).
+        abort_if($entry === null || $request->user()->cannot('view', $entry), 404);
 
         return response()->json([
             'data' => LedgerVerificationResource::make($entry, $this->ledger->verifyEntry($entry))
                 ->resolve($request),
         ]);
-    }
-
-    /** Dono da carteira da linha, ou parte da order quando a linha referencia uma order. */
-    private function canView(int $userId, LedgerEntry $entry): bool
-    {
-        if ($entry->user_id === $userId) {
-            return true;
-        }
-
-        if ($entry->reference_type === 'order' && $entry->reference_id !== null) {
-            return Order::whereKey($entry->reference_id)
-                ->where(function ($query) use ($userId) {
-                    $query->where('buyer_id', $userId)->orWhere('seller_id', $userId);
-                })
-                ->exists();
-        }
-
-        return false;
     }
 }

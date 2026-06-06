@@ -46,7 +46,7 @@ class LedgerService
             $prevHash,
         );
 
-        $entry = LedgerEntry::create([
+        $entry = LedgerEntry::forceCreate([
             'wallet_id' => $lockedWallet->id,
             'user_id' => $lockedWallet->user_id,
             'type' => $type,

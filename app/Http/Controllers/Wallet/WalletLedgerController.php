@@ -13,6 +13,8 @@ class WalletLedgerController extends Controller
     /** Extrato do ledger do próprio usuário (escopado por user_id). */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', LedgerEntry::class);
+
         $paginator = LedgerEntry::query()
             ->where('user_id', $request->user()->id)
             ->latest('id')

@@ -61,10 +61,10 @@ caminhos que movem `balance_cents`.
 | `app/Services/OrderService.php` | `purchase`: append EscrowDebit; `release`: append EscrowReleaseCredit |
 | `app/Services/PixChargeService.php` | `confirmPaid`: append PixTopupCredit |
 | `app/Services/BoostService.php` | `purchaseWithWallet`: append BoostDebit |
-| `app/Http/Controllers/Wallet/LedgerController.php` | `GET /api/wallet/ledger` (extrato paginado) |
-| `app/Http/Controllers/Ledger/VerifyController.php` | `GET /api/ledger/{hash}/verify` (verificação pública/scopada) |
-| `app/Http/Resources/Ledger/LedgerEntryResource.php` | contrato JSON do extrato |
-| `app/Http/Resources/Ledger/LedgerVerificationResource.php` | contrato JSON da verificação (hash, valid, chain_ok, entry) |
+| `app/Http/Controllers/Wallet/WalletLedgerController.php` | `GET /api/wallet/ledger` (extrato paginado) |
+| `app/Http/Controllers/Marketplace/LedgerVerificationController.php` | `GET /api/ledger/{hash}/verify` (verificação pública/scopada) |
+| `app/Http/Resources/Marketplace/LedgerEntryResource.php` | contrato JSON do extrato |
+| `app/Http/Resources/Marketplace/LedgerVerificationResource.php` | contrato JSON da verificação (hash, valid, chain_ok, entry) |
 | `app/Console/Commands/LedgerVerifyCommand.php` | `php artisan ledger:verify {--wallet=}` — exit ≠ 0 em quebra |
 | `app/Policies/LedgerPolicy.php` | `verify`: dono da wallet OU contraparte da order referenciada → 404 anti-IDOR |
 | `config/ledger.php` | `hmac_key => env('LEDGER_HMAC_KEY')` |
